@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sections": [
+    { "title": "Getting started", "path": "getting-started/README.md" },
+    { "title": "Guides", "path": "guides/README.md" },
+    { "title": "Reference", "path": "reference/README.md" },
+    { "title": "Concepts", "path": "concepts/README.md" },
+    { "title": "Security", "path": "security/README.md" },
+    { "title": "Integrations", "path": "integrations/README.md" },
+    { "title": "Troubleshooting", "path": "troubleshooting/README.md" },
+    { "title": "Release policies", "path": "release/README.md" }
+  ]
+}

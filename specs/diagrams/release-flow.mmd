@@ -1,0 +1,15 @@
+flowchart LR
+  DEV[Private Development] --> A[Private Alpha]
+  A --> B[Private Beta]
+  B --> RC[Release Candidate]
+  RC --> PUB[Public v1.0]
+
+  DEV --- D1[Private repo, issues, docs, no public package]
+  A --- D2[Safe deterministic pack, redaction, basic Git]
+  B --- D3[Intelligence, snapshots, profiles, providers, diagnostics]
+  RC --- D4[Scope freeze, security/license/history/dependency/docs audit, signed artifacts]
+  PUB --- D5[Public repository, npm package, docs, contribution and security policy]
+
+  A -->|Gate failure| DEV
+  B -->|Gate failure| A
+  RC -->|Gate failure| B

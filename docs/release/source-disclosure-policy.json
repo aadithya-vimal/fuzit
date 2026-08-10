@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "status": "approved-public-source-boundary",
+  "rules": [
+    {
+      "category": "generated",
+      "patterns": ["benchmarks/results/**"]
+    },
+    {
+      "category": "public",
+      "patterns": ["**"]
+    }
+  ]
+}

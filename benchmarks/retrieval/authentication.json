@@ -1,0 +1,11 @@
+{
+  "id": "authentication",
+  "repositoryFixture": "fixtures/selection/lexical",
+  "task": "fix authentication failure",
+  "expected": {
+    "authentication.ts": 3
+  },
+  "selected": ["authentication.ts"],
+  "symbolHints": ["reportAuthenticationFailure"],
+  "budgetTokens": 16000
+}

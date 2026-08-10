@@ -1,0 +1,48 @@
+# Dependencies and package-manager state
+node_modules/
+.pnpm-store/
+
+# Environment and local credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Fuzit local indexes and generated context
+.fuzit/
+.fuzit-index/
+.fuzit-development/
+.gh-development/
+.v1-development/
+implementation-plan/
+README-FIRST.txt
+SHA256SUMS.txt
+START-FUZIT-V1-CODEX-PROMPT.txt
+
+# Build, test, and generated output
+dist/
+build/
+out/
+coverage/
+artifacts/
+*.log
+
+# Temporary and cache files
+tmp/
+temp/
+.cache/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini

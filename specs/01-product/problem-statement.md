@@ -1,0 +1,88 @@
+# Problem Statement
+
+## Purpose
+
+Describes why static repository flattening fails for modern software reasoning and identifies the root causes Fuzit must solve.
+
+This document is normative for product behavior and architectural boundaries unless it explicitly labels an item as exploratory. It should be read with the [architecture overview](../02-architecture/architecture-overview.md), [security and privacy model](../05-engineering/security-and-privacy.md), and [implementation phases](../06-roadmap/implementation-phases.md).
+
+## Scope and Intended Outcomes
+
+- Separate stale snapshots, missing relationships, absent runtime evidence, weak security, and poor budget control into testable problem classes.
+- Define consequences for developers, reviewers, agents, and CI systems.
+- Create measurable problem-to-capability traceability.
+
+## Required Behavior
+
+Fuzit must implement this capability as part of a traceable context pipeline. Inputs must be normalized, policy must be evaluated before unsafe disclosure, and outputs must retain provenance. A failure in an optional adapter must degrade locally: it may reduce confidence or completeness, but it must not silently fabricate data or invalidate independent sources.
+
+The implementation should preserve the following outcomes:
+
+- Static file concatenation is insufficient because relevance is task-dependent.
+- A large context window does not remove the need for ranking, provenance, or policy.
+- Every execution should reuse valid prior analysis rather than restart from zero.
+
+## Component Interactions
+
+- Discovery identifies available evidence.
+- Analysis and graph modeling recover structure.
+- Snapshots and deltas add temporal state.
+- Selection and budgeting convert available evidence into task evidence.
+
+Every interaction must carry enough identity to support invalidation and explanation: source, revision or observation time, collector/parser version, transformation history, confidence basis, and sensitivity classification where applicable.
+
+## Recommended Implementation Shape
+
+1. Represent the capability through a small domain contract in `packages/core` or `packages/schemas`.
+2. Keep acquisition and platform-specific behavior in adapters such as providers, parsers, collectors, or renderers.
+3. Normalize records before ranking, graph enrichment, budgeting, or persistence.
+4. Make ordering deterministic by using stable identifiers and explicit secondary sort keys.
+5. Emit diagnostics as structured records as well as human-readable CLI messages.
+6. Preserve a machine-readable explanation of inclusion, exclusion, truncation, and redaction.
+7. Version persistent representations and provide a migration or rebuild path.
+
+## Examples
+
+- A user invokes the relevant Fuzit workflow and receives an explainable result governed by policy rather than hidden defaults.
+- A partial source failure is reported in the bundle manifest without discarding unrelated usable context.
+
+## Edge Cases
+
+- Generated code dominates repository size.
+- A failing build has diagnostics but no source revision.
+- Issue text contradicts current code.
+- A renamed file appears as delete plus add.
+
+Edge cases should produce explicit diagnostics. They must never be resolved by silently broadening permissions, bypassing ignore rules, or transmitting private content.
+
+## Risks and Trade-offs
+
+- Overfitting the solution to one AI model.
+- Treating token count as the only cost.
+- Assuming all provider data is authoritative or current.
+
+The preferred trade-off is correctness, privacy, and explainability over maximal recall or superficial speed. Optimization is acceptable only when it preserves output semantics and can be tested with golden fixtures.
+
+## Out of Scope
+
+- General enterprise search.
+- Full observability replacement.
+- Automated incident response.
+
+## Acceptance Indicators
+
+- Each documented problem has at least one planned capability and metric.
+- No core feature exists solely as technology demonstration.
+- Problem examples can be reproduced in fixture repositories.
+
+## Future Extensions
+
+- Extend the capability behind stable contracts after the local deterministic implementation is proven.
+
+## Related Documents
+
+- [Product principles](../01-product/product-principles.md)
+- [Context data model](../02-architecture/context-data-model.md)
+- [Context bundles](../04-features/context-bundles.md)
+- [Testing strategy](../05-engineering/testing-strategy.md)
+- [Definition of done](../07-agent-guidance/definition-of-done.md)

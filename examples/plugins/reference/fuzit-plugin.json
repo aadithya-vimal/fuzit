@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "dev.fuzit.reference",
+  "name": "Fuzit deterministic reference plugin",
+  "version": "1.0.0",
+  "protocol": "fuzit-plugin-v1",
+  "fuzitVersion": "^1.0.0",
+  "entryPoint": "src/index.ts",
+  "description": "Harmless deterministic renderer and profile example.",
+  "capabilities": ["renderer", "profile"],
+  "permissions": {
+    "shell": false,
+    "persistence": false
+  }
+}

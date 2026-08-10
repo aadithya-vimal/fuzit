@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "publicationAuthorized": true,
+  "npmNameApproval": "owner-controlled-and-approved",
+  "licenseState": "MIT final; publication explicitly owner-authorized",
+  "sourceMapPolicy": "exclude all source and declaration maps from distributable artifacts",
+  "dependencyRangePolicy": {
+    "workspace": "private workspaces are root development links only; packed public manifests contain no private workspace references",
+    "external": "exact ranges already recorded in each manifest",
+    "release": "no range or version change is authorized by V1-130"
+  },
+  "publicCandidates": [
+    {
+      "name": "fuzit",
+      "path": "apps/cli",
+      "distribution": "npm",
+      "bin": ["fuzit"],
+      "exports": ["."]
+    },
+    {
+      "name": "@fuzit/mcp-server",
+      "path": "apps/mcp-server",
+      "distribution": "npm",
+      "bin": ["fuzit-mcp"],
+      "exports": ["."]
+    },
+    {
+      "name": "@fuzit/plugin-sdk",
+      "path": "packages/plugin-sdk",
+      "distribution": "npm",
+      "bin": [],
+      "exports": ["."]
+    },
+    {
+      "name": "@fuzit/vscode-extension",
+      "path": "apps/vscode-extension",
+      "distribution": "vsix",
+      "bin": [],
+      "exports": ["."]
+    }
+  ],
+  "bundledInternalPackages": [
+    "@fuzit/analysis",
+    "@fuzit/budgeting",
+    "@fuzit/config",
+    "@fuzit/core",
+    "@fuzit/discovery",
+    "@fuzit/git",
+    "@fuzit/graph",
+    "@fuzit/index",
+    "@fuzit/plugin-host",
+    "@fuzit/profiles",
+    "@fuzit/provider-github",
+    "@fuzit/renderer-core",
+    "@fuzit/renderer-json",
+    "@fuzit/renderer-markdown",
+    "@fuzit/renderer-text",
+    "@fuzit/renderer-xml",
+    "@fuzit/scanner",
+    "@fuzit/schemas",
+    "@fuzit/security",
+    "@fuzit/selection",
+    "@fuzit/snapshots",
+    "@fuzit/watcher"
+  ],
+  "privateDevelopmentPackages": ["@fuzit/benchmark", "@fuzit/testing"]
+}

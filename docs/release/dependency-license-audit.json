@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "scope": "external runtime dependencies reachable from distributable workspaces",
+  "packages": [
+    {
+      "name": "commander",
+      "version": "15.0.0",
+      "license": "MIT",
+      "status": "allowed",
+      "evidence": "node_modules/.pnpm/commander@15.0.0/node_modules/commander/package.json"
+    },
+    {
+      "name": "typescript",
+      "version": "6.0.3",
+      "license": "Apache-2.0",
+      "status": "allowed",
+      "evidence": "node_modules/.pnpm/typescript@6.0.3/node_modules/typescript/package.json"
+    },
+    {
+      "name": "zod",
+      "version": "4.4.3",
+      "license": "MIT",
+      "status": "allowed",
+      "evidence": "node_modules/.pnpm/zod@4.4.3/node_modules/zod/package.json"
+    }
+  ],
+  "findings": {
+    "blocked": 0,
+    "review": 0,
+    "unknown": 0,
+    "copyleft": 0,
+    "nativeOrWasm": 0,
+    "devOnlyExcluded": true
+  }
+}

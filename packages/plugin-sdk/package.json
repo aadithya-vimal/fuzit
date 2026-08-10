@@ -1,0 +1,35 @@
+{
+  "name": "@fuzit/plugin-sdk",
+  "version": "0.0.1",
+  "private": false,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aadithya-vimal/fuzit.git",
+    "directory": "packages/plugin-sdk"
+  },
+  "engines": {
+    "node": ">=24.0.0 <25.0.0"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/**/*.d.ts",
+    "dist/**/*.js"
+  ],
+  "scripts": {
+    "build": "pnpm --dir ../schemas build && tsc -p tsconfig.build.json && node ../../scripts/bundle-public-package.mjs sdk",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@fuzit/schemas": "workspace:*"
+  }
+}

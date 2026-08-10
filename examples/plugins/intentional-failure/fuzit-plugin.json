@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "dev.fuzit.intentional-failure",
+  "name": "Fuzit intentional failure plugin",
+  "version": "1.0.0",
+  "protocol": "fuzit-plugin-v1",
+  "fuzitVersion": "^1.0.0",
+  "entryPoint": "src/index.ts",
+  "description": "Sanitized fixture that fails predictably for isolation tests.",
+  "capabilities": ["renderer"],
+  "permissions": {
+    "shell": false,
+    "persistence": false
+  }
+}

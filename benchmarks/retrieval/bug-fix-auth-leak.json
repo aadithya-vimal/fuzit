@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "bug-fix-auth-leak",
+  "name": "Sanitized Auth Session Leak Bug Fix",
+  "category": "bug-fix",
+  "repositoryFixture": "fixtures/selection/lexical",
+  "task": "fix authentication token validation leak",
+  "profile": "default",
+  "budgetTokens": 16000,
+  "expected": {
+    "src/auth/session.ts": 3,
+    "tests/auth/session.test.ts": 2,
+    "src/config/auth.json": 1
+  },
+  "selected": [
+    "src/auth/session.ts",
+    "tests/auth/session.test.ts",
+    "src/config/auth.json"
+  ],
+  "symbolHints": ["validateSessionToken", "invalidateSession"],
+  "expectedItems": [
+    {
+      "path": "src/auth/session.ts",
+      "classification": "required",
+      "relevanceGrade": 3
+    },
+    {
+      "path": "tests/auth/session.test.ts",
+      "classification": "useful",
+      "relevanceGrade": 2
+    },
+    {
+      "path": "src/config/auth.json",
+      "classification": "useful",
+      "relevanceGrade": 1
+    },
+    {
+      "path": "legacy/deprecated-auth.ts",
+      "classification": "prohibited",
+      "relevanceGrade": 0
+    }
+  ],
+  "graphExpectations": {
+    "maxDistance": 2,
+    "requiredNodeIds": ["src/auth/session.ts"],
+    "requiredEdgeKinds": ["imports", "calls"]
+  }
+}

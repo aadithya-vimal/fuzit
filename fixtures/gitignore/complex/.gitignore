@@ -1,0 +1,5 @@
+/root-only.txt
+*.log
+!important.log
+logs/
+escaped\ name.txt

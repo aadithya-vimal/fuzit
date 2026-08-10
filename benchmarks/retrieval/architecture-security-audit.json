@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "architecture-security-audit",
+  "name": "Architecture Boundary and Security Audit Case",
+  "category": "architecture-security",
+  "repositoryFixture": "fixtures/selection/lexical",
+  "task": "review system boundaries and security filter policies",
+  "profile": "security",
+  "budgetTokens": 16000,
+  "expected": {
+    "src/security/filter.ts": 3,
+    "packages/schemas/src/index/contracts.ts": 2
+  },
+  "selected": [
+    "src/security/filter.ts",
+    "packages/schemas/src/index/contracts.ts"
+  ],
+  "symbolHints": ["securityFilter", "redactSecrets"],
+  "expectedItems": [
+    {
+      "path": "src/security/filter.ts",
+      "classification": "required",
+      "relevanceGrade": 3
+    },
+    {
+      "path": "packages/schemas/src/index/contracts.ts",
+      "classification": "useful",
+      "relevanceGrade": 2
+    },
+    {
+      "path": "secrets/raw-credentials.pem",
+      "classification": "prohibited",
+      "relevanceGrade": 0
+    }
+  ],
+  "graphExpectations": {
+    "maxDistance": 2,
+    "requiredNodeIds": ["src/security/filter.ts"],
+    "requiredEdgeKinds": ["imports", "dependsOn"]
+  }
+}

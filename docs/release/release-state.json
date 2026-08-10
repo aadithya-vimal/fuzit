@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "version": "0.0.1",
+  "tag": "v0.0.1",
+  "branch": "v1-completion",
+  "publicationAuthorized": true,
+  "publicationPaused": true,
+  "repositoryVisibility": "private",
+  "githubActionsAllowed": false,
+  "persistentSchemaVersions": {
+    "incrementalIndex": 1
+  },
+  "releaseAuthorization": {
+    "approvedSourceCommit": "938452394ab42911f2500b582608a8efcbc351a4",
+    "approvedVersion": "0.0.1",
+    "approvedBranch": "v1-completion"
+  },
+  "releaseDecisions": [
+    { "id": "license-mit", "approved": true },
+    { "id": "package-identity", "approved": true },
+    { "id": "version-preparation-commit", "approved": true },
+    { "id": "public-repository-visibility", "approved": true },
+    { "id": "npm-publication", "approved": true },
+    { "id": "github-release", "approved": true },
+    { "id": "documentation-deployment", "approved": true },
+    { "id": "vscode-publication", "approved": true }
+  ],
+  "releaseBlockers": [
+    {
+      "id": "public-package-dependency-closure",
+      "status": "resolved",
+      "reason": "All private runtime workspaces are bundled and the three public tarballs passed an offline clean install outside the monorepo with zero private workspaces."
+    },
+    {
+      "id": "pre-publication-repository-hygiene",
+      "status": "resolved",
+      "reason": "The owner accepted the audit, selected a clean public-history boundary, and approved removal of all REVIEW material."
+    },
+    { "id": "native-linux-host-validation", "status": "accepted" },
+    { "id": "native-macos-validation", "status": "accepted" },
+    { "id": "trademark-name-risk", "status": "accepted" }
+  ]
+}

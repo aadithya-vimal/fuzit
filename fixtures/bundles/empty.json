@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "kind": "repository",
+    "root": "."
+  },
+  "revision": null,
+  "items": [],
+  "redactionSummary": {
+    "findings": 0,
+    "redactedItems": 0,
+    "omittedItems": 0
+  },
+  "warnings": [],
+  "failedSources": [],
+  "budget": {
+    "bytes": 0,
+    "tokens": 0,
+    "truncated": false
+  }
+}

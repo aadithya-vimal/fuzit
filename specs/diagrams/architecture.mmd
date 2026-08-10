@@ -1,0 +1,39 @@
+flowchart LR
+  User[Developer / Agent / CI] --> CLI[CLI]
+  User --> MCP[MCP Server - Experimental]
+  CLI --> APP[Application Services]
+  MCP --> APP
+  DAEMON[Daemon / Watcher - Later] --> APP
+
+  APP --> CFG[Configuration + Policy]
+  APP --> DISC[Discovery + Scanner]
+  APP --> ANALYSIS[Analysis + Parsers]
+  APP --> PROVIDERS[Providers]
+  APP --> RUNTIME[Runtime Collectors]
+
+  DISC --> ITEMS[Normalized Context Items]
+  ANALYSIS --> ITEMS
+  PROVIDERS --> ITEMS
+  RUNTIME --> ITEMS
+
+  ITEMS --> SECURITY[Security Filtering + Redaction]
+  SECURITY --> INDEX[(Local Index / Snapshots)]
+  INDEX --> GRAPH[Context Graph]
+  INDEX --> SELECT[Selection + Profiles]
+  GRAPH --> SELECT
+  CFG --> SECURITY
+  CFG --> SELECT
+
+  SELECT --> BUDGET[Token / Byte Budgeting]
+  BUDGET --> BUNDLE[Immutable Context Bundle]
+  BUNDLE --> RENDER[Renderers]
+  RENDER --> MD[Markdown]
+  RENDER --> JSON[JSON]
+  RENDER --> XML[XML]
+  RENDER --> TEXT[Plain Text]
+  RENDER --> FUZIT[.fuzit - Future]
+
+  PLUGINS[Permissioned Plugins] -. implement .-> PROVIDERS
+  PLUGINS -. implement .-> ANALYSIS
+  PLUGINS -. implement .-> RUNTIME
+  PLUGINS -. implement .-> RENDER

@@ -1,0 +1,18 @@
+flowchart LR
+  PKG[Plugin Package] --> MANIFEST[Manifest: ID, Version, Capabilities, Compatibility]
+  MANIFEST --> VALIDATE[Host Validation]
+  VALIDATE --> PERMS{Permissions Approved?}
+  PERMS -- No --> DENY[Disabled + Diagnostic]
+  PERMS -- Yes --> PROC[Isolated Plugin Process]
+  HOST[Plugin Host] <--> PROC
+  BROKER[Permission Broker] <--> PROC
+  BROKER --> FS[Scoped Filesystem]
+  BROKER --> NET[Approved Network Hosts]
+  BROKER --> CREDS[Named Credential Handles]
+  BROKER --> RUNTIME[Approved Collector Operations]
+  PROC --> SCHEMA[Schema Validation]
+  SCHEMA --> EXT[Provider / Parser / Collector / Renderer / Ranker / Policy / Profile / Graph Enricher]
+  EXT --> CORE[Core Contracts]
+  WATCHDOG[Timeout, Cancellation, Size Limits] --> PROC
+  FAIL[Crash / Violation] --> QUARANTINE[Terminate, Roll Back, Attribute Diagnostic]
+  PROC -. failure .-> FAIL

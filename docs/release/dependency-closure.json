@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "status": "verified",
+  "publicNpmPackages": ["@fuzit/plugin-sdk", "@fuzit/mcp-server", "fuzit"],
+  "vscodePublisher": "fuzit",
+  "classifications": [
+    {
+      "name": "@fuzit/analysis",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    },
+    {
+      "name": "@fuzit/benchmark",
+      "classification": "D",
+      "disposition": "DEV-ONLY"
+    },
+    {
+      "name": "@fuzit/budgeting",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    },
+    {
+      "name": "@fuzit/config",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    },
+    {
+      "name": "@fuzit/core",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    },
+    {
+      "name": "@fuzit/discovery",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    },
+    {
+      "name": "@fuzit/git",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    },
+    {
+      "name": "@fuzit/graph",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    },
+    {
+      "name": "@fuzit/index",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    },
+    {
+      "name": "@fuzit/plugin-host",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    },
+    {
+      "name": "@fuzit/profiles",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    },
+    {
+      "name": "@fuzit/provider-github",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    },
+    {
+      "name": "@fuzit/renderer-core",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    },
+    {
+      "name": "@fuzit/renderer-json",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    },
+    {
+      "name": "@fuzit/renderer-markdown",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    },
+    {
+      "name": "@fuzit/renderer-text",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    },
+    {
+      "name": "@fuzit/renderer-xml",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    },
+    {
+      "name": "@fuzit/scanner",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    },
+    {
+      "name": "@fuzit/schemas",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    },
+    {
+      "name": "@fuzit/security",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    },
+    {
+      "name": "@fuzit/selection",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    },
+    {
+      "name": "@fuzit/snapshots",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    },
+    {
+      "name": "@fuzit/testing",
+      "classification": "D",
+      "disposition": "DEV-ONLY"
+    },
+    {
+      "name": "@fuzit/watcher",
+      "classification": "A",
+      "disposition": "BUNDLE/INLINE"
+    }
+  ],
+  "runtimeTopology": {
+    "fuzit": ["commander", "typescript"],
+    "@fuzit/mcp-server": [],
+    "@fuzit/plugin-sdk": ["zod"],
+    "fuzit-vscode-extension": []
+  }
+}

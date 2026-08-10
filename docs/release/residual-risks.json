@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "status": "reviewed-ready",
+  "risks": [
+    {
+      "id": "public-package-dependency-closure",
+      "kind": "accepted-limitation",
+      "severity": "critical",
+      "status": "resolved",
+      "mitigation": "Internal runtime and declaration dependencies are bundled into the three approved packages and verified with a registry-shaped clean install using only public targets.",
+      "owner": "release-owner",
+      "userImpact": "Installing any of the three approved npm packages from the public registry would fail because required private @fuzit packages are unavailable.",
+      "supportBoundary": "The public proof packs only the three approved npm targets and installs them offline outside the monorepo.",
+      "releaseBlocking": false,
+      "evidence": [
+        "apps/cli/package.json",
+        "apps/mcp-server/package.json",
+        "packages/plugin-sdk/package.json",
+        "scripts/package-smoke.mjs",
+        "docs/release/dependency-closure.json"
+      ]
+    },
+    {
+      "id": "native-ubuntu-validation",
+      "kind": "platform-difference",
+      "severity": "high",
+      "status": "accepted",
+      "mitigation": "Run the complete packed-artifact clean-room suite on a genuine native Ubuntu host.",
+      "owner": "release-owner",
+      "userImpact": "Native Ubuntu behavior cannot be claimed or supported for publication.",
+      "supportBoundary": "WSL, containers, emulation, and hosted runners do not satisfy native Ubuntu evidence.",
+      "releaseBlocking": false,
+      "evidence": ["docs/reference/support-matrix.md"]
+    },
+    {
+      "id": "native-macos-validation",
+      "kind": "platform-difference",
+      "severity": "high",
+      "status": "accepted",
+      "mitigation": "Run the complete packed-artifact clean-room suite on a genuine native macOS host.",
+      "owner": "release-owner",
+      "userImpact": "Native macOS behavior cannot be claimed or supported for publication.",
+      "supportBoundary": "Only execution on a genuine native macOS host satisfies this gate.",
+      "releaseBlocking": false,
+      "evidence": ["docs/reference/support-matrix.md"]
+    },
+    {
+      "id": "npm-registry-ownership",
+      "kind": "accepted-limitation",
+      "severity": "high",
+      "status": "resolved",
+      "mitigation": "Verify owner control of approved npm identities before authorization.",
+      "owner": "release-owner",
+      "userImpact": "Approved npm package identities cannot be published safely.",
+      "supportBoundary": "No npm publication or identity rename occurs without owner-controlled access.",
+      "releaseBlocking": false,
+      "evidence": ["docs/decisions/PACKAGE-IDENTITY.md"]
+    },
+    {
+      "id": "vscode-publisher-ownership",
+      "kind": "accepted-limitation",
+      "severity": "high",
+      "status": "resolved",
+      "mitigation": "Verify owner control of the configured Marketplace publisher.",
+      "owner": "release-owner",
+      "userImpact": "The VS Code extension cannot be distributed through the Marketplace.",
+      "supportBoundary": "Private VSIX verification does not establish publisher control.",
+      "releaseBlocking": false,
+      "evidence": ["apps/vscode-extension/package.json"]
+    },
+    {
+      "id": "trademark-logo-clearance",
+      "kind": "accepted-limitation",
+      "severity": "high",
+      "status": "accepted",
+      "mitigation": "Obtain name, trademark, publisher, and visual-asset clearance.",
+      "owner": "legal-owner",
+      "userImpact": "Public branding and distribution cannot proceed without clearance.",
+      "supportBoundary": "Technical use of the name and logo is not a legal-clearance claim.",
+      "releaseBlocking": false,
+      "evidence": ["docs/release/release-state.json"]
+    },
+    {
+      "id": "final-publication-authorization",
+      "kind": "accepted-limitation",
+      "severity": "high",
+      "status": "resolved",
+      "mitigation": "Obtain explicit owner authorization for the exact release action.",
+      "owner": "release-owner",
+      "userImpact": "No irreversible release action may execute.",
+      "supportBoundary": "Dry-runs and private pushes are preparation, never publication authorization.",
+      "releaseBlocking": false,
+      "evidence": ["docs/release/release-state.json"]
+    },
+    {
+      "id": "bounded-java-go-analysis",
+      "kind": "partial-result",
+      "severity": "low",
+      "status": "accepted",
+      "mitigation": "Keep dynamic, generated, annotation-processing, reflection, and toolchain claims explicitly unsupported.",
+      "owner": "engineering",
+      "userImpact": "Some dynamic Java and Go relationships may be omitted or partial.",
+      "supportBoundary": "V1 promises bounded static analysis only, without native toolchain execution.",
+      "releaseBlocking": false,
+      "evidence": [
+        "tests/analysis/java",
+        "tests/analysis/go",
+        "docs/reference/support-matrix.md"
+      ]
+    },
+    {
+      "id": "relative-performance-target",
+      "kind": "performance-caveat",
+      "severity": "low",
+      "status": "accepted",
+      "mitigation": "Treat recorded timings as environment-specific evidence and enforce only resource and relative incremental bounds.",
+      "owner": "engineering",
+      "userImpact": "Recorded wall-clock timings may differ on other hosts.",
+      "supportBoundary": "Resource limits and relative incremental behavior are supported; absolute timing is not.",
+      "releaseBlocking": false,
+      "evidence": ["benchmarks/results"]
+    },
+    {
+      "id": "windows-clean-room-only-current",
+      "kind": "warning",
+      "severity": "medium",
+      "status": "accepted",
+      "mitigation": "Do not generalize Windows results to native Linux or macOS; retain both platform blockers.",
+      "owner": "release-owner",
+      "userImpact": "Windows success alone does not establish Linux or macOS support.",
+      "supportBoundary": "Only native Windows is currently evidenced; other native platforms remain blocked.",
+      "releaseBlocking": false,
+      "evidence": ["scripts/verify-windows-native.mjs"]
+    }
+  ]
+}

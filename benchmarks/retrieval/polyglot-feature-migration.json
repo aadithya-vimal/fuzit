@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "polyglot-feature-migration",
+  "name": "Polyglot Monorepo Feature and Migration Task",
+  "category": "feature",
+  "repositoryFixture": "monorepo",
+  "task": "add polyglot feature and run schema migration across packages",
+  "profile": "default",
+  "budgetTokens": 16000,
+  "expected": {
+    "packages/core/src/index.ts": 3,
+    "packages/schemas/src/index/contracts.ts": 2,
+    "tests/migrations/migration.test.ts": 1
+  },
+  "selected": [
+    "packages/core/src/index.ts",
+    "packages/schemas/src/index/contracts.ts",
+    "tests/migrations/migration.test.ts"
+  ],
+  "symbolHints": ["migrateSchema", "applyPolyglotFeature"],
+  "expectedItems": [
+    {
+      "path": "packages/core/src/index.ts",
+      "classification": "required",
+      "relevanceGrade": 3
+    },
+    {
+      "path": "packages/schemas/src/index/contracts.ts",
+      "classification": "useful",
+      "relevanceGrade": 2
+    },
+    {
+      "path": "tests/migrations/migration.test.ts",
+      "classification": "useful",
+      "relevanceGrade": 1
+    }
+  ],
+  "graphExpectations": {
+    "maxDistance": 2,
+    "requiredNodeIds": ["packages/core/src/index.ts"],
+    "requiredEdgeKinds": ["imports", "dependsOn"]
+  }
+}

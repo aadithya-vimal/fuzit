@@ -1,0 +1,76 @@
+{
+  "name": "@fuzit/vscode-extension",
+  "displayName": "Fuzit",
+  "description": "Local, private, deterministic repository context engine for VS Code.",
+  "homepage": "https://github.com/aadithya-vimal/fuzit#readme",
+  "version": "0.0.1",
+  "private": false,
+  "license": "MIT",
+  "files": [
+    "dist/extension.js",
+    "dist/index.d.ts",
+    "dist/index.js",
+    "dist/multi-root.js"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aadithya-vimal/fuzit.git",
+    "directory": "apps/vscode-extension"
+  },
+  "publisher": "fuzit",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:fuzit.status",
+    "onCommand:fuzit.getContext",
+    "onCommand:fuzit.init",
+    "onCommand:fuzit.doctor",
+    "onCommand:fuzit.scan"
+  ],
+  "main": "./dist/extension.js",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "fuzit.status",
+        "title": "Fuzit: Check Status"
+      },
+      {
+        "command": "fuzit.getContext",
+        "title": "Fuzit: Get Task Context"
+      },
+      {
+        "command": "fuzit.init",
+        "title": "Fuzit: Initialize Workspace"
+      },
+      {
+        "command": "fuzit.doctor",
+        "title": "Fuzit: Run Doctor"
+      },
+      {
+        "command": "fuzit.scan",
+        "title": "Fuzit: Scan Repository"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json && node ../../scripts/bundle-public-package.mjs vscode",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@fuzit/core": "workspace:*",
+    "@fuzit/schemas": "workspace:*",
+    "@fuzit/security": "workspace:*"
+  }
+}

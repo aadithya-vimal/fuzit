@@ -1,0 +1,18 @@
+flowchart TD
+  EVENT[Filesystem / Git Change Hint] --> VERIFY[Verify Current State]
+  VERIFY --> FP[Compute Fingerprints]
+  FP --> COMPARE{Changed?}
+  COMPARE -- No --> REUSE[Reuse Valid Cached Records]
+  COMPARE -- Yes --> CLASSIFY[Added / Modified / Deleted / Renamed]
+  CLASSIFY --> INVALIDATE[Invalidate Dependent Analysis]
+  INVALIDATE --> REANALYZE[Re-read + Re-analyze Changed Scope]
+  REANALYZE --> GRAPH[Update Graph Nodes and Edges]
+  GRAPH --> STAGE[Stage Index Transaction]
+  REUSE --> STAGE
+  STAGE --> CHECK[Consistency + Schema Check]
+  CHECK -- Pass --> COMMIT[Atomic Commit]
+  CHECK -- Fail --> ROLLBACK[Rollback + Diagnostic]
+  COMMIT --> SNAP[Create Immutable Snapshot]
+  SNAP --> DELTA[Emit Delta]
+  OVERFLOW[Watcher Overflow / Mass Checkout] --> RECONCILE[Bounded Full Reconciliation]
+  RECONCILE --> VERIFY

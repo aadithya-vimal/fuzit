@@ -1,0 +1,30 @@
+{
+  "authentication": {
+    "precision": 1,
+    "recall": 1,
+    "ndcg": 1,
+    "mrr": 1,
+    "bundleSize": 1
+  },
+  "bug-fix-auth-leak": {
+    "precision": 1,
+    "recall": 1,
+    "ndcg": 1,
+    "mrr": 1,
+    "bundleSize": 3
+  },
+  "architecture-security-audit": {
+    "precision": 1,
+    "recall": 1,
+    "ndcg": 1,
+    "mrr": 1,
+    "bundleSize": 2
+  },
+  "polyglot-feature-migration": {
+    "precision": 1,
+    "recall": 1,
+    "ndcg": 1,
+    "mrr": 1,
+    "bundleSize": 3
+  }
+}

@@ -1,0 +1,34 @@
+Usage: fuzit [options] [command]
+
+Private, local-first AI context-engineering CLI.
+
+Options:
+  -V, --version                             output the version number
+  --json                                    emit machine-readable JSON output (default: false)
+  --quiet                                   suppress nonessential output (default: false)
+  --debug                                   enable debug diagnostics (default: false)
+  -h, --help                                display help for command
+
+Commands:
+  config                                    inspect effective configuration
+  doctor                                    report local environment readiness
+  init [options]                            initialize approved local Fuzit files
+  scan [options]                            inspect repository discovery metadata
+  pack [options]                            create a local security-filtered context bundle
+  git                                       inspect local Git context
+  cache                                     Manage the local index.
+  snapshot                                  Manage snapshots.
+  diff [options] <snapshot-a> <snapshot-b>  Compare immutable snapshots.
+  profile                                   display built-in profiles
+  context [options]                         build task-aware local context
+  explain                                   explain selection evidence
+  watch [options]                           Watch repository for changes and update local index
+  graph                                     query a bounded local context graph
+  review [options] <source>                 review a GitHub pull request
+  pr [options] <source>                     review pull request shorthand
+  issue [options] <source>                  get context from a GitHub issue
+  plugin                                    manage and audit local Fuzit plugins
+  support [options]                         preview a bounded metadata-only support bundle
+  help [command]                            display help for command
+
+Unknown commands exit with status 2.

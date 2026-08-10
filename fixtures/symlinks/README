@@ -1,0 +1,2 @@
+Symlink behavior is generated in temporary test directories because portable
+Git fixtures cannot reliably preserve Windows junctions and symlink privileges.

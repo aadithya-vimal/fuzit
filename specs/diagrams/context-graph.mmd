@@ -1,0 +1,23 @@
+graph TD
+  Repo[Repository] -->|Contains| WS[Workspace]
+  WS -->|Contains| Pkg[Package]
+  Pkg -->|Contains| FileA[File: retry.ts]
+  Pkg -->|Contains| FileB[File: checkout.test.ts]
+  FileA -->|Defines| Fn[Function: retryCheckout]
+  FileB -->|Tests| Fn
+  Fn -->|Calls| API[API Endpoint: payment]
+  FileA -->|Imports| Dep[Dependency: retry-lib]
+  Commit[Commit: abc123] -->|Modifies| FileA
+  Issue[Issue: timeout regression] -->|Related To| Fn
+  ADR[ADR: retry policy] -->|Documents| Fn
+  Diag[Test Failure] -->|Fails In| FileB
+  Proc[Runtime Process] -->|Runs As| Svc[Service: checkout]
+  Svc -->|Deploys| API
+  Dep -->|Deprecated By| NewDep[Dependency: retry-core]
+
+  classDef direct fill:#d9ead3,stroke:#38761d;
+  classDef derived fill:#fff2cc,stroke:#bf9000;
+  classDef runtime fill:#d9eaf7,stroke:#245b78;
+  class Repo,WS,Pkg,FileA,FileB,Commit,Issue,ADR,Dep,NewDep direct;
+  class Fn,API,Svc derived;
+  class Diag,Proc runtime;

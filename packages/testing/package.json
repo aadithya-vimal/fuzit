@@ -1,0 +1,21 @@
+{
+  "name": "@fuzit/testing",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "fuzit": "workspace:*",
+    "@fuzit/core": "workspace:*",
+    "@fuzit/schemas": "workspace:*"
+  }
+}

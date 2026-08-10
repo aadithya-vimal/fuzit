@@ -1,0 +1,63 @@
+{
+  "name": "fuzit",
+  "version": "0.0.1",
+  "private": false,
+  "license": "MIT",
+  "files": [
+    "bin/*.mjs",
+    "dist/bin.js",
+    "dist/index.d.ts",
+    "dist/index.js"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aadithya-vimal/fuzit.git",
+    "directory": "apps/cli"
+  },
+  "engines": {
+    "node": ">=24.0.0 <25.0.0"
+  },
+  "type": "module",
+  "bin": {
+    "fuzit": "./bin/fuzit.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json && node ../../scripts/bundle-public-package.mjs cli",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "commander": "15.0.0",
+    "typescript": "6.0.3"
+  },
+  "devDependencies": {
+    "@fuzit/analysis": "workspace:*",
+    "@fuzit/budgeting": "workspace:*",
+    "@fuzit/config": "workspace:*",
+    "@fuzit/core": "workspace:*",
+    "@fuzit/discovery": "workspace:*",
+    "@fuzit/git": "workspace:*",
+    "@fuzit/graph": "workspace:*",
+    "@fuzit/index": "workspace:*",
+    "@fuzit/plugin-host": "workspace:*",
+    "@fuzit/plugin-sdk": "workspace:*",
+    "@fuzit/profiles": "workspace:*",
+    "@fuzit/provider-github": "workspace:*",
+    "@fuzit/renderer-core": "workspace:*",
+    "@fuzit/renderer-json": "workspace:*",
+    "@fuzit/renderer-markdown": "workspace:*",
+    "@fuzit/renderer-text": "workspace:*",
+    "@fuzit/renderer-xml": "workspace:*",
+    "@fuzit/scanner": "workspace:*",
+    "@fuzit/schemas": "workspace:*",
+    "@fuzit/security": "workspace:*",
+    "@fuzit/selection": "workspace:*",
+    "@fuzit/snapshots": "workspace:*",
+    "@fuzit/watcher": "workspace:*"
+  }
+}

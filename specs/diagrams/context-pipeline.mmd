@@ -1,0 +1,24 @@
+flowchart LR
+  S[Context Sources] --> D[Discovery]
+  D --> A[Acquisition]
+  A --> N[Normalization]
+  N --> X[Analysis]
+  X --> G[Graph Enrichment]
+  G --> P[Security Filtering]
+  P --> C[Candidate Generation]
+  C --> R[Explainable Ranking]
+  R --> B[Budgeting]
+  B --> O[Ordering]
+  O --> E[Rendering]
+  E --> Z[Versioned Bundle]
+
+  T[Task + Profile] --> C
+  POL[Context Policy] --> D
+  POL --> P
+  POL --> B
+  I[(Index + Snapshots)] <--> N
+  I <--> X
+  I <--> G
+  I --> C
+  DIAG[Structured Diagnostics] -. emitted by every stage .-> Z
+  PROV[Provenance + Confidence] -. preserved through every stage .-> Z

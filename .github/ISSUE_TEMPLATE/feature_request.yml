@@ -1,0 +1,25 @@
+name: Feature request
+description: Propose a bounded local-first capability
+title: "feature: "
+labels: []
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Describe the user need without private repository or customer information.
+    validations:
+      required: true
+  - type: textarea
+    id: authority
+    attributes:
+      label: Security and authority impact
+      description: Address filesystem, process, network, credentials, persistence, plugins, and data custody.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Deterministic acceptance evidence
+    validations:
+      required: true

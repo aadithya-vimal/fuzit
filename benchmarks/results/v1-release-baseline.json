@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "environment": {
+    "nodeVersion": "v24.12.0",
+    "platform": "win32",
+    "arch": "x64"
+  },
+  "results": [
+    {
+      "id": "architecture-security-audit",
+      "precision": 1,
+      "recall": 1,
+      "ndcg": 1,
+      "mrr": 1,
+      "bundleSize": 2,
+      "missingItems": [],
+      "extraItems": [],
+      "totalTokens": 0,
+      "irrelevantTokens": 0,
+      "irrelevantTokenRatio": 0,
+      "totalBytes": 61,
+      "estimatorId": "utf8-bytes-per-token:v1",
+      "exceedsByteBudget": false,
+      "latencyMs": 0.35999999999999943,
+      "regression": false
+    },
+    {
+      "id": "authentication",
+      "precision": 1,
+      "recall": 1,
+      "ndcg": 1,
+      "mrr": 1,
+      "bundleSize": 1,
+      "missingItems": [],
+      "extraItems": [],
+      "totalTokens": 0,
+      "irrelevantTokens": 0,
+      "irrelevantTokenRatio": 0,
+      "totalBytes": 17,
+      "estimatorId": "utf8-bytes-per-token:v1",
+      "exceedsByteBudget": false,
+      "latencyMs": 0.03750000000000142,
+      "regression": false
+    },
+    {
+      "id": "bug-fix-auth-leak",
+      "precision": 1,
+      "recall": 1,
+      "ndcg": 1,
+      "mrr": 1,
+      "bundleSize": 3,
+      "missingItems": [],
+      "extraItems": [],
+      "totalTokens": 0,
+      "irrelevantTokens": 0,
+      "irrelevantTokenRatio": 0,
+      "totalBytes": 65,
+      "estimatorId": "utf8-bytes-per-token:v1",
+      "exceedsByteBudget": false,
+      "latencyMs": 0.04099999999999682,
+      "regression": false
+    },
+    {
+      "id": "polyglot-feature-migration",
+      "precision": 1,
+      "recall": 1,
+      "ndcg": 1,
+      "mrr": 1,
+      "bundleSize": 3,
+      "missingItems": [],
+      "extraItems": [],
+      "totalTokens": 0,
+      "irrelevantTokens": 0,
+      "irrelevantTokenRatio": 0,
+      "totalBytes": 99,
+      "estimatorId": "utf8-bytes-per-token:v1",
+      "exceedsByteBudget": false,
+      "latencyMs": 0.04279999999999973,
+      "regression": false
+    }
+  ]
+}

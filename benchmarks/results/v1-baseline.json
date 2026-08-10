@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "recordedBy": "pnpm benchmark:retrieval",
+  "thresholds": {
+    "precisionMinimum": 0.999,
+    "recallMinimum": 0.999,
+    "ndcgMinimum": 0.999,
+    "mrrMinimum": 0.999
+  },
+  "authentication": {
+    "precision": 1,
+    "recall": 1,
+    "ndcg": 1,
+    "mrr": 1,
+    "bundleSize": 1
+  },
+  "ablations": ["lexical", "git", "dependency", "profile"]
+}
