@@ -1,6 +1,6 @@
 import { isAbsolute, relative, resolve } from "node:path";
 
-export const MCP_SERVER_VERSION = "0.0.0";
+export const MCP_SERVER_VERSION = "0.0.1";
 export const MCP_PROTOCOL_VERSION = "1";
 
 /** Maximum allowed workspace roots per session */
