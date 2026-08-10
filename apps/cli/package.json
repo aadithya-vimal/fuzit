@@ -19,7 +19,7 @@
   },
   "type": "module",
   "bin": {
-    "fuzit": "./bin/fuzit.mjs"
+    "fuzit": "bin/fuzit.mjs"
   },
   "exports": {
     ".": {

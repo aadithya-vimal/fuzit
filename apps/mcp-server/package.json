@@ -18,7 +18,7 @@
   },
   "type": "module",
   "bin": {
-    "fuzit-mcp": "./dist/bin.js"
+    "fuzit-mcp": "dist/bin.js"
   },
   "exports": {
     ".": {
