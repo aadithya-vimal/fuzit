@@ -32,7 +32,7 @@ const packagePaths = {
   "@fuzit/graph": "packages/graph",
   "@fuzit/index": "packages/index",
   "@fuzit/budgeting": "packages/budgeting",
-  fuzit: "apps/cli",
+  "@fuzit/cli": "apps/cli",
   "@fuzit/mcp-server": "apps/mcp-server",
   "@fuzit/config": "packages/config",
   "@fuzit/core": "packages/core",
@@ -50,7 +50,7 @@ const packagePaths = {
   "@fuzit/plugin-sdk": "packages/plugin-sdk",
   "@fuzit/plugin-host": "packages/plugin-host",
   "@fuzit/watcher": "packages/watcher",
-  "@fuzit/vscode-extension": "apps/vscode-extension",
+  fuzit: "apps/vscode-extension",
 } as const;
 
 async function readManifest(relativePath: string): Promise<PackageManifest> {
@@ -204,7 +204,7 @@ describe("minimal workspace topology", () => {
       ),
     ).toEqual(["@fuzit/index", "@fuzit/schemas"]);
     expect(
-      Object.keys(manifests.get("fuzit")?.dependencies ?? {}).filter(
+      Object.keys(manifests.get("@fuzit/cli")?.dependencies ?? {}).filter(
         (dependency) => dependency.startsWith("@fuzit/"),
       ),
     ).toEqual([]);

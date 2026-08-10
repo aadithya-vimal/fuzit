@@ -86,15 +86,15 @@ describe("intended package topology", () => {
 
   it("fails closed when a declared public contract differs from its manifest", async () => {
     const invalid: Candidate = {
-      name: "fuzit",
-      path: "apps/cli",
-      distribution: "npm",
-      bin: ["not-fuzit"],
-      exports: ["."],
-    };
+  name: "@fuzit/cli",
+  path: "apps/cli",
+  distribution: "npm",
+  bin: ["not-fuzit"],
+  exports: ["."],
+};
 
     await expect(validateCandidate(invalid)).rejects.toThrow(
-      "bin contract mismatch for fuzit",
+      "bin contract mismatch for @fuzit/cli",
     );
   });
 });
