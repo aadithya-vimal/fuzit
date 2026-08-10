@@ -15,10 +15,10 @@ describe("public package identity decision", () => {
       publicCandidates: { name: string; bin: string[] }[];
     };
     expect(topology.publicCandidates.map(({ name }) => name)).toEqual([
-      "fuzit",
+      "@fuzit/cli",
       "@fuzit/mcp-server",
       "@fuzit/plugin-sdk",
-      "@fuzit/vscode-extension",
+      "fuzit",
     ]);
     for (const candidate of topology.publicCandidates) {
       expect(decision).toContain(`\`${candidate.name}\``);

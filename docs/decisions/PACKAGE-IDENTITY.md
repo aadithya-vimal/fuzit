@@ -7,25 +7,24 @@ organization 2FA enforcement enabled. Unscoped `fuzit` had no public package whe
 
 ## Recommendation
 
-Use unscoped **`fuzit`** for the npm CLI and the **`@fuzit` npm scope** for the MCP
-server and Plugin SDK, subject to registry checks before publication.
-Keep the CLI binary as **`fuzit`** and the MCP server binary as **`fuzit-mcp`**.
+Use **`@fuzit/cli`** for the npm CLI and the **`@fuzit` npm scope** for the MCP
+server and Plugin SDK. Keep the CLI binary as **`fuzit`** and the MCP server binary
+as **`fuzit-mcp`**.
 
-The intended public identities are:
+The published public identities are:
 
-| Distribution | Package identity            | Executable  | Status                                  |
-| ------------ | --------------------------- | ----------- | --------------------------------------- |
-| npm          | `fuzit`                     | `fuzit`     | Approved; owner controlled              |
-| npm          | `@fuzit/mcp-server`         | `fuzit-mcp` | Approved; owner controlled              |
-| npm          | `@fuzit/plugin-sdk`         | None        | Approved; owner controlled              |
-| VSIX         | `fuzit` / publisher `fuzit` | None        | Approved; owner controlled              |
+| Distribution | Package identity            | Executable  | Status                      |
+| ------------ | --------------------------- | ----------- | --------------------------- |
+| npm          | `@fuzit/cli`                | `fuzit`     | Published; owner controlled |
+| npm          | `@fuzit/mcp-server`         | `fuzit-mcp` | Published; owner controlled |
+| npm          | `@fuzit/plugin-sdk`         | None        | Published; owner controlled |
+| VSIX         | `fuzit` / publisher `fuzit` | None        | Published; owner controlled |
 
 All other `@fuzit/*` workspaces remain bundled internals or private development
 packages as recorded by [`package-topology.json`](../release/package-topology.json).
-The current private CLI workspace identity `@fuzit/cli` transitions to the approved
-public `fuzit` identity only in the guarded V1-159 metadata application.
-The private workspace identity `@fuzit/vscode-extension` remains an implementation
-identifier; its approved Marketplace identity is extension `fuzit`, publisher `fuzit`.
+The npm CLI is published as `@fuzit/cli` while retaining the executable name `fuzit`.
+The VS Code extension is published under Marketplace identity `fuzit.fuzit`
+(extension `fuzit`, publisher `fuzit`).
 
 ## Audit findings
 
@@ -42,25 +41,19 @@ identifier; its approved Marketplace identity is extension `fuzit`, publisher `f
 
 ## Collision and fallback policy
 
-Before approval, the owner must verify control of `@fuzit` through the relevant
-registry account. If the scope cannot be controlled, stop release preparation and
-select a new scope in a superseding decision record. Do not silently fall back to
-unscoped names: `fuzit` and similar names may already be reserved, and an unscoped
-fallback would change installation, provenance, and dependency identities.
+Registry and Marketplace ownership were verified before publication. Future package
+identity changes must not silently fall back to unscoped or alternate names, because
+that would change installation, provenance, and dependency identities.
 
-## Migration implications
+## Published identity implications
 
-1. Public-candidate manifests eventually need approved versions, license metadata,
-   repository metadata, publish contents, and non-private status in one bounded
-   release change.
-2. `workspace:*` dependencies must be rewritten only by the release packaging path
-   and verified against the artifact manifest; source manifests stay deterministic.
-3. Consumers must import the three approved npm package identities and invoke the two
-   stable binary names. Any later rename requires deprecation and migration notes.
-4. Package tarballs, VSIX metadata, SBOM, checksums, provenance, documentation, and
-   clean-install tests must all agree on the approved identity.
-5. No metadata change may imply that the approved license has already been applied
-   or that publication authorization has been granted.
+1. The published npm identities are `@fuzit/cli`, `@fuzit/mcp-server`, and
+   `@fuzit/plugin-sdk`.
+2. The CLI executable remains `fuzit`; the MCP server executable remains `fuzit-mcp`.
+3. The VS Code Marketplace identity is `fuzit.fuzit`.
+4. Package tarballs, VSIX metadata, SBOMs, checksums, documentation, and clean-install
+   validation must continue to agree with these identities.
+5. Any future package rename requires an explicit migration and deprecation plan.
 
 ## Owner decision
 
@@ -68,3 +61,7 @@ fallback would change installation, provenance, and dependency identities.
 are canonical. On 2026-08-09 the owner confirmed registry and Marketplace publisher
 control and explicitly set `publicationAuthorized=true`. Registry availability is
 still rechecked immediately before publication; a collision must not cause a silent rename.
+
+The originally planned unscoped npm identity `fuzit` could not be published because
+npm rejected the name as too similar to existing packages. The owner therefore
+published the CLI as `@fuzit/cli`; the executable remains `fuzit`.
