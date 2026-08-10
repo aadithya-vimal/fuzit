@@ -11,12 +11,12 @@
   },
   "publicCandidates": [
     {
-  "name": "@fuzit/cli",
-  "path": "apps/cli",
-  "distribution": "npm",
-  "bin": ["fuzit"],
-  "exports": ["."]
-},
+      "name": "@fuzit/cli",
+      "path": "apps/cli",
+      "distribution": "npm",
+      "bin": ["fuzit"],
+      "exports": ["."]
+    },
     {
       "name": "@fuzit/mcp-server",
       "path": "apps/mcp-server",
@@ -32,12 +32,12 @@
       "exports": ["."]
     },
     {
-  "name": "fuzit",
-  "path": "apps/vscode-extension",
-  "distribution": "vsix",
-  "bin": [],
-  "exports": ["."]
-}
+      "name": "fuzit",
+      "path": "apps/vscode-extension",
+      "distribution": "vsix",
+      "bin": [],
+      "exports": ["."]
+    }
   ],
   "bundledInternalPackages": [
     "@fuzit/analysis",
