@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="#build-status"><img src="https://img.shields.io/badge/build-passing-brightgreen" alt="Build Status" /></a>
-  <a href="#license"><img src="https://img.shields.io/badge/license-Private--V1-blue" alt="License" /></a>
+  <a href="#license"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License" /></a>
   <a href="#node-version"><img src="https://img.shields.io/badge/node-%3E%3D24.0.0-brightgreen" alt="Node Version" /></a>
   <a href="#pnpm-workspace"><img src="https://img.shields.io/badge/pnpm-workspace-orange" alt="PNPM Workspace" /></a>
   <a href="#mcp-ready"><img src="https://img.shields.io/badge/MCP-JSON--RPC-purple" alt="MCP Ready" /></a>

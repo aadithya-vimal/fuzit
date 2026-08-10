@@ -1,8 +1,8 @@
 # Contributing to Fuzit
 
-Fuzit remains a private, unpublished V1 candidate. This workflow prepares the
-owner-approved DCO contribution model; its presence does not yet invite public
-submissions or authorize publication.
+Fuzit is an open-source project released under the MIT License. Contributions
+are welcome through issues and pull requests, subject to the contribution and
+security policies below.
 
 ## Before contributing
 
@@ -15,10 +15,9 @@ submissions or authorize publication.
 
 ## Contribution terms
 
-Contributions to the eventual public project are accepted under MIT using Developer
+Contributions to Fuzit are accepted under MIT using Developer
 Certificate of Origin (DCO) sign-off. Contributors retain copyright; no CLA or
-copyright assignment is required for V1. Public issues, forks, and pull requests
-remain inactive until release authorization. See the
+copyright assignment is required for V1. See the
 [contribution terms decision](docs/decisions/CONTRIBUTION-TERMS.md).
 
 ## Pull-request evidence
