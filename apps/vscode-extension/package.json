@@ -1,5 +1,5 @@
 {
-  "name": "@fuzit/vscode-extension",
+  "name": "fuzit",
   "displayName": "Fuzit",
   "description": "Local, private, deterministic repository context engine for VS Code.",
   "homepage": "https://github.com/aadithya-vimal/fuzit#readme",
