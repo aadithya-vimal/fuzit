@@ -173,11 +173,6 @@ async function buildRepositoryGraph(
     packages: [],
   });
 }
-const humanNodes = (result: ReturnType<typeof graphQuery>) =>
-  [
-    ...result.nodes.map((node) => `${node.kind}\t${node.path ?? node.id}`),
-    ...result.diagnostics,
-  ].join("\n");
 export function registerGraphCommand(
   program: Command,
   dependencies: GraphCommandDependencies,
@@ -235,10 +230,23 @@ export function registerGraphCommand(
                 options.node!,
                 { repositoryId: snapshot.repositoryId, limits },
               );
-      if (dependencies.json || operation === "stats") {
+      if (dependencies.json) {
         dependencies.writeData(result);
       } else {
-        dependencies.writeData(humanNodes(result as ReturnType<typeof graphQuery>));
+        dependencies.writeData(
+          operation === "stats"
+            ? {
+                kind: "graph-stats",
+                ...result,
+              }
+            : {
+                kind: "graph-query",
+                output: options.input ?? "",
+                results: (result as ReturnType<typeof graphQuery>).nodes,
+                diagnostics: (result as ReturnType<typeof graphQuery>).diagnostics,
+                truncated: (result as ReturnType<typeof graphQuery>).truncated,
+              },
+        );
       }
       if (snapshot.completeness === "partial")
         for (const message of snapshot.diagnostics)
@@ -276,12 +284,15 @@ export function registerGraphCommand(
           encoding: "utf8",
           flag: "wx",
         });
-        dependencies.writeData({
+        const buildResult = {
           output,
           nodes: snapshot.nodes.length,
           edges: snapshot.edges.length,
           completeness: snapshot.completeness,
-        });
+        };
+        dependencies.writeData(
+          dependencies.json ? buildResult : { kind: "graph-build", ...buildResult },
+        );
       } catch (error) {
         dependencies.writeDiagnostic(
           diagnostic(

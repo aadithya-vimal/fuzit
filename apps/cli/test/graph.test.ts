@@ -28,6 +28,7 @@ const analysis: NormalizedAnalysis = {
   completeness: "complete",
   diagnostics: [],
 };
+
 async function run(args: readonly string[], partial = false) {
   const root = await mkdtemp(join(tmpdir(), "fuzit-graph-cli-"));
   let stdout = "";
@@ -105,20 +106,20 @@ describe("graph CLI", () => {
     expect(repositoryNode).toBeDefined();
 
     const stats = await execute(
-      ["graph", "stats", "--input", graphPath],
+      ["--json", "graph", "stats", "--input", graphPath],
       invocationRoot,
     );
     expect(stats.exitCode).toBe(0);
     expect(JSON.parse(stats.stdout)).toMatchObject({ nodes: 2, edges: 1 });
-    expect(stats.stderr).toContain("Reading graph statistics");
-    expect(stats.stderr).not.toContain("Building repository graph");
+    expect(stats.stderr).toBe("");
 
     const neighbors = await execute(
       ["graph", "neighbors", "--input", graphPath, repositoryNode.id],
       invocationRoot,
     );
     expect(neighbors.exitCode).toBe(0);
-    expect(neighbors.stdout).toContain("file\tsrc/a.ts");
+    expect(neighbors.stdout).toContain("Fuzit · Repository Graph Query");
+    expect(neighbors.stdout).toContain("FILE: src/a.ts");
     expect(neighbors.stderr).toContain("Finding graph neighbors");
 
     const impact = await execute(
@@ -133,7 +134,7 @@ describe("graph CLI", () => {
       invocationRoot,
     );
     expect(query.exitCode).toBe(0);
-    expect(query.stdout).toContain("file\tsrc/a.ts");
+    expect(query.stdout).toContain("FILE: src/a.ts");
     expect(query.stderr).toContain("Querying repository graph");
   });
 
@@ -227,23 +228,25 @@ describe("graph CLI", () => {
       "graph.json",
     ]);
     expect(neighbors.exitCode).toBe(0);
-    expect(neighbors.stdout).toContain("file\tsrc/a.ts");
+    expect(neighbors.stdout).toContain("FILE: src/a.ts");
     expect(neighbors.stderr).toContain("Finding graph neighbors");
     expect(neighbors.stderr).toContain("graph complete");
   });
+
   it("routes partial diagnostics to stderr and preserves safe stdout", async () => {
     const result = await run(
       ["graph", "query", "--input", "graph.json", "--kind", "file"],
       true,
     );
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toBe("file\tsrc/a.ts\n");
+    expect(result.stdout).toContain("FILE: src/a.ts");
     expect(result.stderr).toContain(
       "warning GRAPH.PARTIAL: parser unavailable\n",
     );
     expect(result.stderr).toContain("Querying repository graph");
     expect(result.stderr).toContain("graph complete");
   });
+
   it("uses validation exit codes for bounds and root escape", async () => {
     const bounded = await run([
       "graph",
@@ -259,5 +262,64 @@ describe("graph CLI", () => {
     const escaped = await run(["graph", "stats", "--input", "../graph.json"]);
     expect(escaped.exitCode).toBe(EXIT_CODES.validation);
     expect(escaped.stderr).toContain("repository root");
+  });
+
+  it("graph stats human mode shows statistics, not graph-build output", async () => {
+    const result = await run(["graph", "stats", "--input", "graph.json"]);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Graph Statistics");
+    expect(result.stdout).toContain("Nodes");
+    expect(result.stdout).toContain("Edges");
+    expect(result.stdout).toContain("Node kinds");
+    expect(result.stdout).not.toContain("Graph built");
+  });
+
+  it("graph stats --json preserves existing JSON shape (no kind field)", async () => {
+    const result = await run(["--json", "graph", "stats", "--input", "graph.json"]);
+    expect(result.exitCode).toBe(0);
+    const parsed = JSON.parse(result.stdout);
+    expect(parsed).toMatchObject({ schemaVersion: 1, nodes: 2, edges: 1 });
+    expect(parsed.kind).toBeUndefined();
+    expect(result.stderr).toBe("");
+  });
+
+  it("graph build human mode shows polished graph-build box", async () => {
+    const invocationRoot = await mkdtemp(join(tmpdir(), "fuzit-graph-build-human-"));
+    const repositoryRoot = await mkdtemp(join(tmpdir(), "fuzit-graph-build-repo-"));
+    await mkdir(join(repositoryRoot, ".git"));
+    await mkdir(join(repositoryRoot, "src"));
+    await writeFile(join(repositoryRoot, "src", "b.ts"), "export {};");
+    const graphPath = join(repositoryRoot, ".fuzit-build-test.json");
+
+    const built = await execute(
+      ["graph", "build", "--root", repositoryRoot, "--output", graphPath],
+      invocationRoot,
+    );
+    expect(built.exitCode).toBe(0);
+    expect(built.stdout).toContain("Graph built");
+    expect(built.stdout).toContain("Nodes");
+    expect(built.stdout).toContain("Output");
+    expect(() => JSON.parse(built.stdout)).toThrow();
+  });
+
+  it("graph build --json preserves existing JSON shape (no kind field)", async () => {
+    const invocationRoot = await mkdtemp(join(tmpdir(), "fuzit-graph-build-json-"));
+    const repositoryRoot = await mkdtemp(join(tmpdir(), "fuzit-graph-build-json-repo-"));
+    await mkdir(join(repositoryRoot, ".git"));
+    await writeFile(join(repositoryRoot, "c.ts"), "export {};");
+    const graphPath = join(repositoryRoot, ".fuzit-json-build.json");
+
+    const built = await execute(
+      ["--json", "graph", "build", "--root", repositoryRoot, "--output", graphPath],
+      invocationRoot,
+    );
+    expect(built.exitCode).toBe(0);
+    const parsed = JSON.parse(built.stdout);
+    expect(typeof parsed.output).toBe("string");
+    expect(typeof parsed.nodes).toBe("number");
+    expect(typeof parsed.edges).toBe("number");
+    expect(typeof parsed.completeness).toBe("string");
+    expect(parsed.kind).toBeUndefined();
+    expect(built.stderr).toBe("");
   });
 });
