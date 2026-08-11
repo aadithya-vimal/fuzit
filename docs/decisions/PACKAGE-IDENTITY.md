@@ -15,7 +15,7 @@ The published public identities are:
 
 | Distribution | Package identity            | Executable  | Status                      |
 | ------------ | --------------------------- | ----------- | --------------------------- |
-| npm          | `@fuzit/cli`                | `fuzit`     | Published; owner controlled |
+| npm          | `@fuzit/cli`                | `fuzit`, `repomix` | Published; owner controlled |
 | npm          | `@fuzit/mcp-server`         | `fuzit-mcp` | Published; owner controlled |
 | npm          | `@fuzit/plugin-sdk`         | None        | Published; owner controlled |
 | VSIX         | `fuzit` / publisher `fuzit` | None        | Published; owner controlled |

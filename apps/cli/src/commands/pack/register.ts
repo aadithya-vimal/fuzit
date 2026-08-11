@@ -15,7 +15,7 @@ import {
 import { markdownRenderer } from "@fuzit/renderer-markdown";
 import { RendererRegistry } from "@fuzit/renderer-core";
 import { jsonRenderer } from "@fuzit/renderer-json";
-import { xmlRenderer } from "@fuzit/renderer-xml";
+import { renderXml, xmlRenderer } from "@fuzit/renderer-xml";
 import { textRenderer } from "@fuzit/renderer-text";
 import {
   collectGitDiff,
@@ -119,6 +119,8 @@ export function registerPackCommand(
     .option("--split-size <size>", "split output into chunks (e.g. 500kb, 1mb)")
     .option("--copy", "copy packed output to system clipboard", false)
     .option("--dry-run", "report selection without writing output")
+    .option("--instruction <text>", "prepend system prompt or instructions to context bundle")
+    .option("--config <path>", "custom configuration file path")
     .option("--git <mode>", "include current, history, or diff Git context")
     .option("--since <snapshot>", "include changes since an immutable snapshot")
     .action(
@@ -138,6 +140,8 @@ export function registerPackCommand(
           splitSize?: string;
           copy?: boolean;
           dryRun?: boolean;
+          instruction?: string;
+          config?: string;
           git?: string;
           since?: string;
         },
@@ -337,6 +341,7 @@ export function registerPackCommand(
           },
           intelligence,
           ...(gitContext === undefined ? {} : { git: gitContext }),
+          ...(options.instruction ? { instruction: options.instruction } : {}),
         });
 
         if (options.dryRun) {
@@ -423,4 +428,108 @@ export function registerPackCommand(
         );
       },
     );
+}
+
+export async function executeDualPack(
+  root: string,
+  environment: Readonly<Record<string, string | undefined>>,
+  options: {
+    compress?: boolean;
+    removeComments?: boolean;
+    removeEmptyLines?: boolean;
+    lineNumbers?: boolean;
+    instruction?: string;
+  } = {},
+): Promise<{
+  kind: "dual-pack";
+  outputs: string[];
+  files: number;
+  tokens: number;
+}> {
+  const acquisition = await acquireRepository(root, environment);
+  let items = [...acquisition.items];
+  const transformOptions = {
+    ...(options.compress ? { compress: true } : {}),
+    ...(options.removeComments ? { removeComments: true } : {}),
+    ...(options.removeEmptyLines ? { removeEmptyLines: true } : {}),
+    ...(options.lineNumbers ? { lineNumbers: true } : {}),
+  };
+
+  if (
+    transformOptions.compress ||
+    transformOptions.removeComments ||
+    transformOptions.removeEmptyLines ||
+    transformOptions.lineNumbers
+  ) {
+    items = items.map((item) => {
+      if (!item.content) return item;
+      const transformed = transformCodeContent(
+        item.content,
+        item.path,
+        transformOptions,
+      );
+      return registerSecurityFilteredItem({
+        ...item,
+        content: transformed,
+      });
+    });
+  }
+
+  const intelligence = analyzeRepository(acquisition);
+  const gitIdentity = await collectGitIdentity(root);
+  const estimate = estimateBudget(items.map((i) => i.content ?? "").join("\n"));
+
+  const bundle = createContextBundle({
+    schemaVersion: 1,
+    source: { kind: "repository", root: "." },
+    revision: gitIdentity.head,
+    items: items.map((item) => ({
+      id: item.id,
+      path: item.path,
+      sha256: item.sha256,
+      contentStatus: item.contentStatus,
+      redacted: item.findings.length > 0,
+    })),
+    redactionSummary: {
+      findings: items.reduce((sum, item) => sum + item.findings.length, 0),
+      redactedItems: items.filter((item) => item.findings.length > 0).length,
+      omittedItems: items.filter((item) => item.contentStatus === "omitted").length,
+    },
+    warnings: [],
+    failedSources: [],
+    budget: {
+      bytes: estimate.bytes,
+      tokens: estimate.estimatedTokens,
+      truncated: items.some((item) => item.contentStatus === "truncated"),
+    },
+    intelligence,
+    ...(options.instruction ? { instruction: options.instruction } : {}),
+  });
+
+  const mdContent = markdownRenderer.render(bundle, items, markdownRenderer.options.parse({}));
+  const xmlContent = renderXml(bundle);
+
+  const mdPath = resolve(root, "fuzit-pack.md");
+  const xmlPath = resolve(root, "fuzit-pack.xml");
+
+  const mdHandle = await open(mdPath, "w");
+  try {
+    await mdHandle.writeFile(mdContent, "utf8");
+  } finally {
+    await mdHandle.close();
+  }
+
+  const xmlHandle = await open(xmlPath, "w");
+  try {
+    await xmlHandle.writeFile(xmlContent, "utf8");
+  } finally {
+    await xmlHandle.close();
+  }
+
+  return {
+    kind: "dual-pack",
+    outputs: ["fuzit-pack.md", "fuzit-pack.xml"],
+    files: items.length,
+    tokens: bundle.budget.tokens,
+  };
 }

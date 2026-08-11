@@ -17,6 +17,7 @@ export function renderText(
 ): string {
   for (const item of items) assertSecurityFilteredItem(item);
   const lines = [
+    ...(bundle.instruction ? ["USER INSTRUCTION:", bundle.instruction, "========================================", ""] : []),
     "FUZIT CONTEXT BUNDLE",
     `Bundle: ${bundle.id}`,
     `Root: ${bundle.source.root}`,

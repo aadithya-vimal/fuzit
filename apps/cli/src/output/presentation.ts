@@ -587,6 +587,16 @@ function formatInitPlanBox(value: MaybeRecord, theme: Theme): string {
   return box(theme, "Fuzit · Project Initialization", lines);
 }
 
+function formatDualPack(value: MaybeRecord, theme: Theme): string {
+  const lines: string[] = [
+    pair("Markdown output", "fuzit-pack.md"),
+    pair("XML output", "fuzit-pack.xml"),
+    pair("Files packed", String(value.files ?? value.filesCount ?? 0)),
+    pair("Estimated tokens", String(value.tokens ?? value.tokensCount ?? 0)),
+  ];
+  return box(theme, "Fuzit · Dual Context Pack Complete", lines);
+}
+
 // ---------------------------------------------------------------------------
 // Main dispatch
 // ---------------------------------------------------------------------------
@@ -622,6 +632,7 @@ export function formatHumanValue(value: unknown, themeOverrides?: Partial<Theme>
     case "graph-build":  return formatGraphBuild(record, theme);
     case "graph-stats":  return formatGraphStats(record, theme);
     case "pack":         return formatPack(record, theme);
+    case "dual-pack":    return formatDualPack(record, theme);
     case "cache-init":
     case "cache-status":
     case "cache-rebuild":
@@ -648,6 +659,9 @@ export function formatHumanValue(value: unknown, themeOverrides?: Partial<Theme>
   }
   if ("selected" in record && "redactions" in record) {
     return formatPack(record, theme);
+  }
+  if ("outputs" in record && "files" in record) {
+    return formatDualPack(record, theme);
   }
   if ("results" in record && "truncated" in record) {
     return formatGraphQuery(record, theme);

@@ -23,6 +23,7 @@ export function renderMarkdown(
     left.path.localeCompare(right.path, "en"),
   );
   const lines = [
+    ...(bundle.instruction ? ["## User Instruction", "", bundle.instruction, "", "---", ""] : []),
     "# Fuzit Context Bundle",
     "",
     `- Bundle: \`${bundle.id}\``,

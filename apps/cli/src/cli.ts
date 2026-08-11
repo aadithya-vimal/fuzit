@@ -6,7 +6,7 @@ import { registerConfigCommand } from "./config/register.js";
 import { registerDoctorCommand } from "./commands/doctor/register.js";
 import { registerInitCommand } from "./commands/init/register.js";
 import { registerScanCommand } from "./commands/scan/register.js";
-import { registerPackCommand } from "./commands/pack/register.js";
+import { executeDualPack, registerPackCommand } from "./commands/pack/register.js";
 import { registerGitCommand } from "./commands/git/register.js";
 import { registerCacheCommand } from "./commands/cache/register.js";
 import { registerSnapshotCommand } from "./commands/snapshot/register.js";
@@ -317,6 +317,32 @@ export async function runCli(
       arguments_ = ["issue", ...arguments_];
     } else if (route.target === "context") {
       arguments_ = ["context", "--root", firstArg, ...arguments_.slice(1)];
+    }
+  }
+
+  const positionalArgs = arguments_.filter((arg) => !arg.startsWith("-"));
+  const helpOrVersion = arguments_.some((arg) =>
+    ["--help", "-h", "--version", "-V", "help"].includes(arg),
+  );
+
+  if (positionalArgs.length === 0 && !helpOrVersion) {
+    try {
+      const root = runtime.repositoryRoot ?? process.cwd();
+      const dualResult = await executeDualPack(
+        root,
+        runtime.environment ?? process.env,
+      );
+      output.writeData(dualResult);
+      return EXIT_CODES.success;
+    } catch (error) {
+      output.writeDiagnostic(
+        cliDiagnostic(
+          "CLI.INTERNAL",
+          error instanceof Error ? error.message : String(error),
+        ),
+        error,
+      );
+      return EXIT_CODES.internal;
     }
   }
 

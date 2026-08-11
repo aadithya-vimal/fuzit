@@ -49,6 +49,7 @@ export const contextBundleSchema = z.strictObject({
       diff: z.unknown().nullable(),
     })
     .optional(),
+  instruction: z.string().optional(),
 });
 
 export type ContextBundle = z.infer<typeof contextBundleSchema>;

@@ -1,6 +1,6 @@
 {
   "name": "@fuzit/cli",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "private": false,
   "license": "MIT",
   "files": [
@@ -19,7 +19,8 @@
   },
   "type": "module",
   "bin": {
-    "fuzit": "bin/fuzit.mjs"
+    "fuzit": "bin/fuzit.mjs",
+    "repomix": "bin/repomix.mjs"
   },
   "exports": {
     ".": {

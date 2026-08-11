@@ -14,7 +14,7 @@
       "name": "@fuzit/cli",
       "path": "apps/cli",
       "distribution": "npm",
-      "bin": ["fuzit"],
+      "bin": ["fuzit", "repomix"],
       "exports": ["."]
     },
     {

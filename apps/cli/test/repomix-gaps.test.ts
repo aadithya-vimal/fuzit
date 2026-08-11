@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -115,6 +115,35 @@ describe("Repomix Gaps Feature Suite", () => {
         expect(result.exitCode).toBe(0);
         expect(result.stdout).not.toContain("// comment");
         expect(result.stdout).toContain("1 |");
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    });
+    it("supports zero-argument dual-packing into fuzit-pack.md and fuzit-pack.xml", async () => {
+      const root = await mkdtemp(join(tmpdir(), "fuzit-zero-arg-"));
+      try {
+        await writeFile(join(root, "main.ts"), "console.log('hello');");
+        const result = await captureRun(["--json"], root);
+        expect(result.exitCode).toBe(0);
+        const mdExists = await readFile(join(root, "fuzit-pack.md"), "utf8");
+        const xmlExists = await readFile(join(root, "fuzit-pack.xml"), "utf8");
+        expect(mdExists).toContain("main.ts");
+        expect(xmlExists).toContain("<contextBundle");
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    });
+
+    it("supports --instruction option prepending system prompt to bundle", async () => {
+      const root = await mkdtemp(join(tmpdir(), "fuzit-instruction-"));
+      try {
+        await writeFile(join(root, "api.ts"), "export const get = () => {};");
+        const result = await captureRun(
+          ["--json", "pack", "--root", root, "--format", "markdown", "--output", "-", "--instruction", "Focus on REST API"],
+          root,
+        );
+        expect(result.exitCode).toBe(0);
+        expect(result.stdout).toContain("Focus on REST API");
       } finally {
         await rm(root, { recursive: true, force: true });
       }
