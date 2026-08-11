@@ -121,8 +121,16 @@ export function registerPackCommand(
     .option("--dry-run", "report selection without writing output")
     .option("--instruction <text>", "prepend system prompt or instructions to context bundle")
     .option("--config <path>", "custom configuration file path")
+    .option("--max-files <count>", "override maximum file count limit", (val) => Number(val))
     .option("--git <mode>", "include current, history, or diff Git context")
     .option("--since <snapshot>", "include changes since an immutable snapshot")
+    .option("-F, --full", "force full unlimited dump of all repository files", false)
+    .option("--target <model>", "target AI model context window optimization (e.g. gpt-terra, gpt-sol, gemini-3.6, claude-fable, deepseek-r1)")
+    .option("--task <intent>", "intent-based context retrieval for specific natural language tasks")
+    .option("--diff", "pack only files changed in git diff", false)
+    .option("--staged", "pack only staged git files", false)
+    .option("--profile <profile>", "apply preset workflow profile (e.g. bug-fix, security-audit, code-review)")
+    .option("--zip", "output compressed .zip context archive", false)
     .action(
       async (
         sourceArg: string | undefined,
@@ -142,8 +150,16 @@ export function registerPackCommand(
           dryRun?: boolean;
           instruction?: string;
           config?: string;
+          maxFiles?: number;
           git?: string;
           since?: string;
+          full?: boolean;
+          target?: string;
+          task?: string;
+          diff?: boolean;
+          staged?: boolean;
+          profile?: string;
+          zip?: boolean;
         },
       ) => {
         let renderer;
@@ -178,9 +194,11 @@ export function registerPackCommand(
 
         let items: SecurityFilteredItem[] = [];
         let failedSources: string[] = [];
+        const effectiveMaxFiles = options.full ? 999999 : options.maxFiles;
         const acquisition = await acquireRepository(
           root,
           dependencies.environment,
+          { ...(effectiveMaxFiles !== undefined ? { maxFiles: effectiveMaxFiles } : {}) },
         );
 
         if (isStdin) {
@@ -210,6 +228,27 @@ export function registerPackCommand(
           failedSources = acquisition.omissions
             .filter(({ failure }) => failure)
             .map(({ path, reason }) => `${path}: ${reason}`);
+        }
+
+        // Apply --diff or --staged filter
+        if (options.diff || options.staged) {
+          const status = await collectGitStatus(root);
+          const changedPaths = new Set(status.map((s) => s.path));
+          if (changedPaths.size > 0) {
+            items = items.filter((item) => changedPaths.has(item.path));
+          }
+        }
+
+        // Apply --task filter
+        if (options.task) {
+          const words = options.task.toLowerCase().split(/\s+/).filter(Boolean);
+          items = items.filter((item) =>
+            words.some(
+              (w) =>
+                item.path.toLowerCase().includes(w) ||
+                (item.content && item.content.toLowerCase().includes(w)),
+            ),
+          );
         }
 
         // Apply --include and --ignore pattern filters

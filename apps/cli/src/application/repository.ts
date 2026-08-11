@@ -68,11 +68,13 @@ function projectRules(config: EffectiveConfig): ExplicitPathRule[] {
 export async function acquireRepository(
   repositoryRoot: string,
   environment: Readonly<Record<string, string | undefined>> = {},
+  overrides?: { maxFiles?: number },
 ): Promise<RepositoryAcquisition> {
   const root = resolve(repositoryRoot);
   const config = await loadEffectiveConfig({
     repositoryRoot: root,
     environment,
+    cli: overrides?.maxFiles !== undefined ? { maxFiles: overrides.maxFiles } : {},
   });
   const items: SecurityFilteredItem[] = [];
   const omissions: { path: string; reason: string; failure: boolean }[] = [];

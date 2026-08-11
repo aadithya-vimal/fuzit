@@ -597,6 +597,41 @@ function formatDualPack(value: MaybeRecord, theme: Theme): string {
   return box(theme, "Fuzit · Dual Context Pack Complete", lines);
 }
 
+function formatServe(value: MaybeRecord, theme: Theme): string {
+  return box(theme, "Fuzit · RAG API Server", [
+    pair("Status", paint(theme, ANSI.green, "RUNNING")),
+    pair("Endpoint", String(value.endpoint ?? "")),
+    pair("Host", String(value.host ?? "")),
+    pair("Port", String(value.port ?? "")),
+    pair("Repository", truncate(String(value.root ?? "."), 55)),
+  ]);
+}
+
+function formatApply(value: MaybeRecord, theme: Theme): string {
+  const applied = Array.isArray(value.applied) ? value.applied : [];
+  const lines: string[] = [
+    pair("Status", value.status === "success" ? paint(theme, ANSI.green, "SUCCESS") : String(value.status).toUpperCase()),
+    pair("Applied files", String(applied.length)),
+    "",
+  ];
+  for (const f of (applied as string[]).slice(0, 15)) {
+    lines.push(`  APPLIED  ${truncate(f, 55)}`);
+  }
+  return box(theme, "Fuzit · Code Patch Application", lines);
+}
+
+function formatUiDashboard(value: MaybeRecord, theme: Theme): string {
+  const languages = Array.isArray(value.languages) ? value.languages.join(", ") : "";
+  const lines: string[] = [
+    pair("Repository", truncate(String(value.repository ?? "."), 55)),
+    pair("Files discovered", String(value.totalFiles ?? 0)),
+    pair("Omitted files", String(value.omissions ?? 0)),
+    pair("Languages", truncate(languages || "None", 55)),
+    pair("Profiles available", String(value.profilesCount ?? 6)),
+  ];
+  return box(theme, "Fuzit · Interactive UI Dashboard", lines);
+}
+
 // ---------------------------------------------------------------------------
 // Main dispatch
 // ---------------------------------------------------------------------------
@@ -633,6 +668,9 @@ export function formatHumanValue(value: unknown, themeOverrides?: Partial<Theme>
     case "graph-stats":  return formatGraphStats(record, theme);
     case "pack":         return formatPack(record, theme);
     case "dual-pack":    return formatDualPack(record, theme);
+    case "serve":        return formatServe(record, theme);
+    case "apply":        return formatApply(record, theme);
+    case "ui-dashboard": return formatUiDashboard(record, theme);
     case "cache-init":
     case "cache-status":
     case "cache-rebuild":

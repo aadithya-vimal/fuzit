@@ -24,6 +24,9 @@ import {
 import { registerIssueCommand } from "./commands/issue/register.js";
 import { registerPluginCommand } from "./commands/plugin/register.js";
 import { registerSupportCommand } from "./commands/support/register.js";
+import { registerServeCommand } from "./commands/serve/register.js";
+import { registerApplyCommand } from "./commands/apply/register.js";
+import { registerUiCommand } from "./commands/ui/register.js";
 import { routeSourceInput } from "@fuzit/core";
 import { createOutputRouter, type OutputIo } from "./output/router.js";
 
@@ -303,6 +306,30 @@ export async function runCli(
     },
   });
   registerSupportCommand(program, CLI_VERSION, output.writeData);
+  registerServeCommand(program, {
+    currentDirectory: runtime.repositoryRoot ?? process.cwd(),
+    environment: runtime.environment ?? process.env,
+    writeData: output.writeData,
+    setExitCode: (code) => {
+      commandExitCode = code;
+    },
+  });
+  registerApplyCommand(program, {
+    currentDirectory: runtime.repositoryRoot ?? process.cwd(),
+    environment: runtime.environment ?? process.env,
+    writeData: output.writeData,
+    setExitCode: (code) => {
+      commandExitCode = code;
+    },
+  });
+  registerUiCommand(program, {
+    currentDirectory: runtime.repositoryRoot ?? process.cwd(),
+    environment: runtime.environment ?? process.env,
+    writeData: output.writeData,
+    setExitCode: (code) => {
+      commandExitCode = code;
+    },
+  });
 
   // Top-level URL dispatch handling (e.g. `fuzit https://github.com/...`)
   const firstArg = arguments_[0];

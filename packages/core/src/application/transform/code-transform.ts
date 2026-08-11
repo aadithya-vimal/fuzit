@@ -74,13 +74,12 @@ export function addLineNumbers(content: string): string {
 export function compressCodeContent(content: string, filePath = ""): string {
   const ext = filePath.includes(".") ? filePath.split(".").pop()?.toLowerCase() ?? "" : "";
 
-  if (ext === "py") {
+  if (["py", "rb"].includes(ext)) {
     return content
       .split("\n")
       .map((line) => {
-        if (/^\s*(def |class )/.test(line)) return line;
+        if (/^\s*(def |class |module |import|from|require|attr_)/.test(line)) return line;
         if (/^\s*#/.test(line)) return line;
-        if (/^\s*(import|from|return|pass|\.\.\.)/.test(line)) return line;
         if (line.trim().length === 0) return line;
         if (!line.startsWith(" ")) return line;
         return null;
@@ -89,12 +88,10 @@ export function compressCodeContent(content: string, filePath = ""): string {
       .join("\n");
   }
 
-  // C-style languages (TS, JS, Go, Rust, Java, C, C++)
-  // Replace multiline block bodies of functions/methods with { /* implementation hidden */ }
-  return content.replace(
-    /(\b(?:function|class|async)\s+[a-zA-Z0-9_$]+\s*(?:\([^)]*\))?[^{]*)\{[\s\S]*?\}/g,
-    "$1{ /* implementation hidden */ }",
-  );
+  // C-style languages (TS, JS, Go, Rust, Java, C, C++, C#)
+  return content
+    .replace(/(\b(?:function|class|interface|type|async|export|public|private|protected|static|fn|def|struct|enum)\s+[a-zA-Z0-9_$]+\s*(?:\([^)]*\))?[^{]*)\{[\s\S]*?\}/g, "$1{ /* implementation hidden */ }")
+    .replace(/(const|let|var)\s+([a-zA-Z0-9_$]+)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>\s*\{[\s\S]*?\}/g, "$1 $2 = (...) => { /* implementation hidden */ }");
 }
 
 /**

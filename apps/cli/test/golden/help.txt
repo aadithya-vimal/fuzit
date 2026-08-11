@@ -30,6 +30,9 @@ Commands:
   issue [options] <source>                  get context from a GitHub issue
   plugin                                    manage and audit local Fuzit plugins
   support [options]                         preview a bounded metadata-only support bundle
+  serve [options] [port]                    Start local RAG / Context REST API server over the repository
+  apply [options] [patchFile]               Apply AI-generated code diffs or code blocks safely to working tree
+  ui|interactive [options]                  Interactive CLI dashboard and context bundle inspector
   help [command]                            display help for command
 
 Unknown commands exit with status 2.

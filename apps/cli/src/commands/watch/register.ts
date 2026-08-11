@@ -20,6 +20,7 @@ import {
   acquisitionContentHash,
   repositoryIdentity,
 } from "../../application/repository.js";
+import { executeDualPack } from "../pack/register.js";
 
 const versions = {
   scannerVersion: "1",
@@ -58,7 +59,7 @@ export function registerWatchCommand(
     .option("--quiet", "Suppress non-essential log output", false)
     .option("--once", "Process one update batch and exit immediately", false)
     .option("--foreground", "Run in foreground process", false)
-    .option("--no-initial-scan", "Skip initial repository scan", false)
+    .option("--pack", "Automatically sync fuzit-pack.md and fuzit-pack.xml on file changes", false)
     .option("--reconcile", "Trigger explicit canonical reconciliation", false)
     .option("--status", "Report current watch status and exit", false)
     .action(async (options) => {
@@ -121,8 +122,11 @@ export function registerWatchCommand(
 
       if (options.once) {
         await daemon.processPendingBatch("batch-cli-once");
+        if (options.pack) {
+          await executeDualPack(repositoryRoot, process.env);
+        }
         await daemon.stop();
-        dependencies.writeData({ status: "complete", mode: "once" });
+        dependencies.writeData({ status: "complete", mode: "once", ...(options.pack ? { packSynced: true } : {}) });
         return;
       }
 
