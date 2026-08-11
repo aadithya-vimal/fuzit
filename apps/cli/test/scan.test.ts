@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { runCli } from "../src/cli.js";
+import { CLI_VERSION, runCli } from "../src/cli.js";
 
 async function scan(root: string, mode = "--items") {
   let stdout = "";
@@ -53,7 +53,7 @@ describe("scan baseline", () => {
     );
     expect(exitCode).toBe(0);
     expect(stdout).toContain('"status":"complete"');
-    expect(stderr).toContain("Fuzit v0.0.1 · Scanning repository...");
+    expect(stderr).toContain(`Fuzit v${CLI_VERSION} · Scanning repository...`);
     expect(stderr).toContain("scan complete");
 
     const machine = await scan(root, "--summary");
