@@ -8,7 +8,7 @@ import {
   githubRequest,
   normalizePrFile,
   normalizePullRequestData,
-  resolveCredential,
+  resolveBestGitHubCredential,
   type FixtureTransport,
 } from "@fuzit/provider-github";
 import type {
@@ -47,7 +47,7 @@ export async function runPrReview(
   options: ReviewRunOptions,
 ): Promise<ReviewRunResult> {
   const { prRef } = options;
-  const credential = resolveCredential({
+  const credential = await resolveBestGitHubCredential({
     host: prRef.host.webHost,
     env: { ...(options.environment ?? process.env) },
   });
@@ -63,26 +63,56 @@ export async function runPrReview(
     `${apiRoot}/repos/${encodeURIComponent(prRef.owner)}/${encodeURIComponent(prRef.repo)}/pulls/${prRef.number}`,
     requestOptions,
   );
-  if (!metadataResponse.ok)
+  if (!metadataResponse.ok) {
+    if (metadataResponse.kind === "rate-limited") {
+      throw new Error(
+        `GitHub rate limited the request. Retry after ${metadataResponse.retryAfterSeconds ?? "a short delay"} seconds.`,
+      );
+    }
+    if (metadataResponse.kind === "network-error") {
+      throw new Error(`GitHub network failure: ${metadataResponse.diagnostic}`);
+    }
     throw new Error(
-      `GitHub PR acquisition failed: ${metadataResponse.diagnostic}`,
+      credential.isAuthenticated
+        ? "GitHub resource not accessible with the current credentials."
+        : "GitHub authentication required for this private repository.",
+    );
+  }
+  if (metadataResponse.status === 401)
+    throw new Error("GitHub credentials are invalid or expired.");
+  if (metadataResponse.status === 403)
+    throw new Error(
+      credential.isAuthenticated
+        ? "GitHub access is forbidden for the authenticated account."
+        : "GitHub authentication required or access forbidden.",
+    );
+  if (metadataResponse.status === 404)
+    throw new Error(
+      credential.isAuthenticated
+        ? "GitHub resource not accessible with the current credentials."
+        : "GitHub resource not found or not accessible anonymously.",
     );
   if (metadataResponse.status !== 200)
-    throw new Error(
-      `GitHub PR acquisition failed (HTTP ${metadataResponse.status}). Check the PR number and repository access.`,
-    );
+    throw new Error(`GitHub PR acquisition failed (HTTP ${metadataResponse.status}).`);
   const filesResponse = await githubRequest(
     `${apiRoot}/repos/${encodeURIComponent(prRef.owner)}/${encodeURIComponent(prRef.repo)}/pulls/${prRef.number}/files?per_page=100`,
     requestOptions,
   );
-  if (!filesResponse.ok)
+  if (!filesResponse.ok) {
     throw new Error(
-      `GitHub PR files acquisition failed: ${filesResponse.diagnostic}`,
+      filesResponse.kind === "rate-limited"
+        ? `GitHub rate limited the file request. Retry after ${filesResponse.retryAfterSeconds ?? "a short delay"} seconds.`
+        : `GitHub PR files acquisition failed: ${filesResponse.diagnostic}`,
     );
+  }
+  if (filesResponse.status === 401)
+    throw new Error("GitHub credentials are invalid or expired.");
+  if (filesResponse.status === 403)
+    throw new Error("GitHub access is forbidden for the authenticated account.");
+  if (filesResponse.status === 404)
+    throw new Error("GitHub resource not accessible with the current credentials.");
   if (filesResponse.status !== 200)
-    throw new Error(
-      `GitHub PR files acquisition failed (HTTP ${filesResponse.status}).`,
-    );
+    throw new Error(`GitHub PR files acquisition failed (HTTP ${filesResponse.status}).`);
 
   let rawMetadata: unknown;
   let rawFiles: unknown;

@@ -235,11 +235,11 @@ export function registerGraphCommand(
                 options.node!,
                 { repositoryId: snapshot.repositoryId, limits },
               );
-      dependencies.writeData(
-        dependencies.json || operation === "stats"
-          ? result
-          : humanNodes(result as ReturnType<typeof graphQuery>),
-      );
+      if (dependencies.json || operation === "stats") {
+        dependencies.writeData(result);
+      } else {
+        dependencies.writeData(humanNodes(result as ReturnType<typeof graphQuery>));
+      }
       if (snapshot.completeness === "partial")
         for (const message of snapshot.diagnostics)
           dependencies.writeDiagnostic(diagnostic("warning", message));

@@ -48,7 +48,11 @@ export interface CredentialHandle {
 }
 
 export type CredentialSource =
-  "anonymous" | "FUZIT_GITHUB_TOKEN" | "GH_TOKEN" | "host-specific";
+  | "anonymous"
+  | "FUZIT_GITHUB_TOKEN"
+  | "GH_TOKEN"
+  | "github-cli"
+  | "host-specific";
 
 // ---------------------------------------------------------------------------
 // Credential resolution
@@ -118,6 +122,36 @@ export function resolveCredential(
     source: "anonymous",
     _getAuthorizationHeader: () => null,
   };
+}
+
+export async function resolveGitHubCliCredential(
+  options: ResolveCredentialOptions,
+): Promise<CredentialHandle | null> {
+  const { spawnSync } = await import("node:child_process");
+  const result = spawnSync("gh", ["auth", "token", "--hostname", options.host], {
+    encoding: "utf8",
+    shell: false,
+    stdio: "pipe",
+  });
+  if (result.status !== 0) return null;
+  const token = result.stdout.trim();
+  if (!token) return null;
+  const captured = token;
+  return {
+    isAuthenticated: true,
+    host: options.host,
+    source: "github-cli",
+    _getAuthorizationHeader: () => `Bearer ${captured}`,
+  };
+}
+
+export async function resolveBestGitHubCredential(
+  options: ResolveCredentialOptions,
+): Promise<CredentialHandle> {
+  const direct = resolveCredential(options);
+  if (direct.isAuthenticated) return direct;
+  const cli = await resolveGitHubCliCredential(options);
+  return cli ?? direct;
 }
 
 // ---------------------------------------------------------------------------

@@ -19,6 +19,8 @@ export {
 
 export {
   resolveCredential,
+  resolveGitHubCliCredential,
+  resolveBestGitHubCredential,
   describeCredential,
   assertNoTokenInObject,
   type CredentialHandle,

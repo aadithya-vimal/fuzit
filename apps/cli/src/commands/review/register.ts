@@ -85,7 +85,9 @@ export function registerReviewCommand(
 
           if (options.output === "-") {
             dependencies.writeData(
-              options.format === "json" ? result : rendered,
+              options.format === "json"
+                ? result
+                : result.summary,
             );
           } else {
             const outputPath = resolve(
@@ -97,7 +99,13 @@ export function registerReviewCommand(
               encoding: "utf8",
               flag: "wx",
             });
-            dependencies.writeData({ output: outputPath, result });
+            dependencies.writeData({
+              kind: "review",
+              output: outputPath,
+              repository: result.targetRepo,
+              prNumber: result.prNumber,
+              findings: result.findings,
+            });
           }
         } catch (error) {
           dependencies.writeData({
@@ -211,7 +219,22 @@ export function registerPrCommand(
 
           if (options.output === "-") {
             dependencies.writeData(
-              options.format === "json" ? result : rendered,
+              options.format === "json"
+                ? result
+                : {
+                    kind: "review",
+                    repository: result.targetRepo,
+                    prNumber: result.prNumber,
+                    authenticated: Boolean(
+                      dependencies.environment.FUZIT_GITHUB_TOKEN ||
+                      dependencies.environment.GH_TOKEN,
+                    ),
+                    profile: options.profile,
+                    budgetTokens: Number(options.budgetTokens),
+                    findings: result.findings,
+                    source: sourceArg,
+                    summary: result.summary,
+                  },
             );
           } else {
             const outputPath = resolve(
@@ -223,7 +246,13 @@ export function registerPrCommand(
               encoding: "utf8",
               flag: "wx",
             });
-            dependencies.writeData({ output: outputPath, result });
+            dependencies.writeData({
+              kind: "review",
+              output: outputPath,
+              repository: result.targetRepo,
+              prNumber: result.prNumber,
+              findings: result.findings,
+            });
           }
         } catch (error) {
           dependencies.writeData({

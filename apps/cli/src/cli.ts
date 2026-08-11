@@ -16,6 +16,7 @@ import { registerContextCommand } from "./commands/context/register.js";
 import { registerExplainCommand } from "./commands/explain/register.js";
 import { registerWatchCommand } from "./commands/watch/register.js";
 import { registerGraphCommand } from "./commands/graph/register.js";
+import { registerAuthCommand } from "./commands/auth/register.js";
 import {
   registerReviewCommand,
   registerPrCommand,
@@ -125,6 +126,7 @@ export async function runCli(
       watch: "Starting repository watch",
       graph: "Building repository graph",
       review: "Fetching and reviewing pull request",
+      auth: "Managing GitHub authentication",
       pr: "Fetching and reviewing pull request",
       issue: "Fetching issue context",
       plugin: "Inspecting plugins",
@@ -247,6 +249,13 @@ export async function runCli(
     writeDiagnostic: output.writeDiagnostic,
     setExitCode: (exitCode) => {
       commandExitCode = exitCode;
+    },
+  });
+  registerAuthCommand(program, {
+    environment: runtime.environment ?? process.env,
+    writeData: output.writeData,
+    setExitCode: (code) => {
+      commandExitCode = code;
     },
   });
   registerGraphCommand(program, {

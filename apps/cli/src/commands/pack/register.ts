@@ -238,8 +238,10 @@ export function registerPackCommand(
         if (options.output === "-") {
           dependencies.writeData(markdown);
         } else {
+          let outputPath: string;
           try {
-            const handle = await open(resolve(root, options.output), "wx");
+            outputPath = resolve(root, options.output);
+            const handle = await open(outputPath, "wx");
             try {
               await handle.writeFile(markdown, "utf8");
             } finally {
@@ -259,6 +261,12 @@ export function registerPackCommand(
             dependencies.setExitCode(EXIT_CODES.environment);
             return;
           }
+          dependencies.writeData({
+            kind: "pack",
+            output: outputPath,
+            selected: items.map((item) => item.path),
+            redactions: bundle.redactionSummary,
+          });
         }
         dependencies.setExitCode(
           failedSources.length > 0 ? EXIT_CODES.partial : EXIT_CODES.success,
