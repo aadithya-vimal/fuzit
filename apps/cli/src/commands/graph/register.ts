@@ -1,6 +1,7 @@
-import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { isAbsolute, relative, resolve } from "node:path";
+import { readFile, writeFile, mkdir, realpath, stat } from "node:fs/promises";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { createHash } from "node:crypto";
+import { toRepositoryRelativePath } from "@fuzit/core";
 import {
   buildFilePackageGraph,
   graphImpact,
@@ -43,16 +44,14 @@ const diagnostic = (
 });
 async function loadGraph(root: string, input: string): Promise<GraphSnapshot> {
   const path = resolve(root, input);
-  const rel = relative(root, path);
-  if (
-    rel === ".." ||
-    rel.startsWith(`..\\`) ||
-    rel.startsWith("../") ||
-    isAbsolute(rel)
-  )
+  const [canonicalRoot, canonicalPath] = await Promise.all([
+    realpath(root),
+    realpath(path),
+  ]);
+  if (!isGraphPathInsideRepository(canonicalRoot, canonicalPath))
     throw new Error("Graph input must remain inside the repository root");
   const value: unknown = JSON.parse(
-    (await readFile(path, "utf8")).replace(/^\uFEFF/, ""),
+    (await readFile(canonicalPath, "utf8")).replace(/^\uFEFF/, ""),
   );
   if (
     !value ||
@@ -78,6 +77,66 @@ async function loadGraph(root: string, input: string): Promise<GraphSnapshot> {
         ? "partial"
         : "complete",
   };
+}
+
+export function isGraphPathInsideRepository(
+  repositoryRoot: string,
+  graphPath: string,
+): boolean {
+  try {
+    toRepositoryRelativePath(repositoryRoot, graphPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function hasGitMetadata(directory: string): Promise<boolean> {
+  try {
+    await stat(join(directory, ".git"));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function findContainingGitRepository(
+  startDirectory: string,
+): Promise<string | null> {
+  let directory = await realpath(startDirectory);
+  while (true) {
+    if (await hasGitMetadata(directory)) return directory;
+    const parent = dirname(directory);
+    if (parent === directory) return null;
+    directory = parent;
+  }
+}
+
+async function resolveGraphInput(
+  defaultRoot: string,
+  input: string,
+  explicitRoot?: string,
+): Promise<{ readonly root: string; readonly input: string }> {
+  const requestedRoot = explicitRoot
+    ? resolve(defaultRoot, explicitRoot)
+    : defaultRoot;
+  const inputPath = isAbsolute(input)
+    ? resolve(input)
+    : resolve(requestedRoot, input);
+
+  if (explicitRoot) return { root: requestedRoot, input: inputPath };
+
+  const containingRoot = await findContainingGitRepository(dirname(inputPath));
+  if (containingRoot && isGraphPathInsideRepository(containingRoot, inputPath))
+    return { root: containingRoot, input: inputPath };
+
+  const canonicalDefaultRoot = await realpath(defaultRoot);
+  if (isGraphPathInsideRepository(canonicalDefaultRoot, inputPath))
+    return { root: canonicalDefaultRoot, input: inputPath };
+
+  throw new Error(
+    "Graph input is outside the current repository root. Pass --root <repository> for an artifact inside another repository.",
+  );
 }
 async function buildRepositoryGraph(
   root: string,
@@ -130,9 +189,12 @@ export function registerGraphCommand(
     command
       .option(
         "--input <path>",
-        "repository-relative graph JSON path; defaults to building from --root",
+        "graph JSON path; its containing Git repository is used when --root is omitted",
       )
-      .option("--root <path>", "repository root", ".");
+      .option(
+        "--root <path>",
+        "repository root that must contain --input; defaults to the input artifact's Git repository",
+      );
   const run = async (
     options: {
       input?: string;
@@ -147,7 +209,11 @@ export function registerGraphCommand(
     try {
       const root = resolve(dependencies.repositoryRoot, options.root ?? ".");
       const snapshot = options.input
-        ? await loadGraph(root, options.input)
+        ? await resolveGraphInput(
+            dependencies.repositoryRoot,
+            options.input,
+            options.root,
+          ).then((resolved) => loadGraph(resolved.root, resolved.input))
         : await buildRepositoryGraph(root, dependencies.environment);
       const limits = {
         depth: Number(options.depth ?? 1),

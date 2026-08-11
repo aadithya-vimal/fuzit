@@ -129,6 +129,22 @@ export async function runCli(
       issue: "Fetching issue context",
       plugin: "Inspecting plugins",
     };
+    if (operation === "graph") {
+      const graphIndex = arguments_.indexOf("graph");
+      const graphOperation = arguments_[graphIndex + 1];
+      labels.graph =
+        graphOperation === "build"
+          ? "Building repository graph"
+          : graphOperation === "stats"
+            ? "Reading graph statistics"
+            : graphOperation === "neighbors"
+              ? "Finding graph neighbors"
+              : graphOperation === "impact"
+                ? "Analyzing graph impact"
+                : graphOperation === "query"
+                  ? "Querying repository graph"
+                  : "Processing repository graph";
+    }
     output.writeActivity(
       `Fuzit v${CLI_VERSION} · ${labels[operation!] ?? "Working"}...`,
     );
