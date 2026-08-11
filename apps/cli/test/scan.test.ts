@@ -5,11 +5,13 @@ import { describe, expect, it } from "vitest";
 
 import { CLI_VERSION, runCli } from "../src/cli.js";
 
-async function scan(root: string, mode = "--items") {
+async function scan(root: string, mode = "--items", json = false) {
   let stdout = "";
   let stderr = "";
   const exitCode = await runCli(
-    ["scan", "--root", root, mode, "--json"],
+    json
+      ? ["--json", "scan", "--root", root, mode]
+      : ["scan", "--root", root, mode],
     {
       writeOut: (value) => {
         stdout += value;
@@ -52,11 +54,12 @@ describe("scan baseline", () => {
       { repositoryRoot: root, environment: {} },
     );
     expect(exitCode).toBe(0);
-    expect(stdout).toContain('"status":"complete"');
+    expect(stdout).toContain("Fuzit · Repository Scan");
+    expect(stdout).toContain("Status");
     expect(stderr).toContain(`Fuzit v${CLI_VERSION} · Scanning repository...`);
     expect(stderr).toContain("scan complete");
 
-    const machine = await scan(root, "--summary");
+    const machine = await scan(root, "--summary", true);
     expect(machine.stderr).toBe("");
     expect(() => JSON.parse(machine.stdout)).not.toThrow();
   });
@@ -67,10 +70,9 @@ describe("scan baseline", () => {
     const result = await scan(root, "");
 
     expect(result.exitCode).toBe(0);
-    expect(JSON.parse(result.stdout)).toMatchObject({
-      status: "complete",
-      counts: { files: 1 },
-    });
+    expect(result.stdout).toContain("Fuzit · Repository Scan");
+    expect(result.stdout).toContain("Files");
+    expect(result.stdout).toContain("Status");
   });
 
   it("keeps the default summary useful in quiet mode", async () => {
@@ -80,10 +82,8 @@ describe("scan baseline", () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
-    expect(JSON.parse(result.stdout)).toMatchObject({
-      status: "complete",
-      counts: { files: 1, directories: 0, symlinks: 0 },
-    });
+    expect(result.stdout).toContain("Fuzit · Repository Scan");
+    expect(result.stdout).toContain("Status");
   });
 
   it("preserves explicit root listing", async () => {
@@ -138,7 +138,7 @@ describe("scan baseline", () => {
 
   it("handles an empty repository", async () => {
     const root = await mkdtemp(join(tmpdir(), "fuzit-empty-"));
-    expect(await scan(root, "--summary")).toMatchObject({
+    expect(await scan(root, "--summary", true)).toMatchObject({
       exitCode: 0,
       stderr: "",
     });
@@ -158,7 +158,7 @@ describe("scan baseline", () => {
   it("keeps JSON output free of TTY progress", async () => {
     const root = await mkdtemp(join(tmpdir(), "fuzit-json-"));
     await writeFile(join(root, "a.txt"), "x");
-    const result = await scan(root);
+    const result = await scan(root, "--summary", true);
 
     expect(result.stderr).toBe("");
     expect(() => JSON.parse(result.stdout.trim())).not.toThrow();

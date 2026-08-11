@@ -259,6 +259,7 @@ export function registerScanCommand(
           root,
           counts,
           status: "complete",
+          nextSteps: ["fuzit pack --root .", "fuzit graph build --root . --output .fuzit-graph.json"],
         });
         dependencies.setExitCode(EXIT_CODES.success);
         return;

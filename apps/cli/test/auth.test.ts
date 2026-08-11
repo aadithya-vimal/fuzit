@@ -32,8 +32,22 @@ async function capture(
   return { exitCode, stdout, stderr };
 }
 
+function installUserFetch(login = "aadit") {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const headers = new Headers(init?.headers);
+    expect(headers.get("authorization")).toMatch(/^Bearer\s+/);
+    return new Response(JSON.stringify({ login }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  });
+  vi.stubGlobal("fetch", fetchMock as typeof fetch);
+  return fetchMock;
+}
+
 beforeEach(() => {
   spawnSync.mockReset();
+  vi.unstubAllGlobals();
 });
 
 describe("auth command", () => {
@@ -54,6 +68,7 @@ describe("auth command", () => {
 
   it("reports environment token authentication", async () => {
     spawnSync.mockImplementation(() => ({ status: 1, stdout: "", stderr: "" }));
+    installUserFetch("env-user");
     const result = await capture(["auth", "status"], {
       GH_TOKEN: "gh-token-for-tests",
     });
@@ -74,11 +89,12 @@ describe("auth command", () => {
       }
       return { status: 1, stdout: "", stderr: "" };
     });
+    installUserFetch("github-cli-user");
 
     const result = await capture(["auth", "status"]);
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain("Status: Authenticated");
-    expect(result.stdout).toContain("Source: github-cli");
+    expect(result.stdout).toContain("Authenticated");
+    expect(result.stdout).toContain("Source             github-cli");
     expect(result.stdout).not.toContain("mock-gh-token");
   });
 });

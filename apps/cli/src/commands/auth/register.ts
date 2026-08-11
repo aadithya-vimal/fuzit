@@ -100,33 +100,6 @@ async function authStatus(
   };
 }
 
-function renderAuthStatus(
-  status: Awaited<ReturnType<typeof authStatus>>,
-): string {
-  const lines = [
-    "GitHub Authentication",
-    "",
-    `Status: ${status.status}`,
-    `Host: ${status.host}`,
-  ];
-  if ("account" in status) {
-    lines.push(`Account: ${status.account}`);
-  }
-  if ("source" in status) {
-    lines.push(`Source: ${status.source}`);
-  }
-  if ("permission" in status) {
-    lines.push(`Permission: ${status.permission}`);
-  }
-  if ("error" in status) {
-    lines.push(`Error: ${status.error}`);
-  }
-  if ("nextStep" in status) {
-    lines.push(`Next: ${status.nextStep}`);
-  }
-  return `${lines.join("\n")}\n`;
-}
-
 export function registerAuthCommand(
   program: Command,
   dependencies: AuthCommandDependencies,
@@ -168,9 +141,7 @@ export function registerAuthCommand(
         dependencies.setExitCode(EXIT_CODES.environment);
         return;
       }
-      dependencies.writeData(
-        renderAuthStatus(await authStatus(dependencies.environment)),
-      );
+      dependencies.writeData(await authStatus(dependencies.environment));
       dependencies.setExitCode(EXIT_CODES.success);
     });
 
@@ -178,9 +149,7 @@ export function registerAuthCommand(
     .command("status")
     .description("show GitHub authentication status")
     .action(async () => {
-      dependencies.writeData(
-        renderAuthStatus(await authStatus(dependencies.environment)),
-      );
+      dependencies.writeData(await authStatus(dependencies.environment));
       dependencies.setExitCode(EXIT_CODES.success);
     });
 }

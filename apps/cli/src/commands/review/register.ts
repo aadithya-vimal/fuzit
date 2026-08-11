@@ -87,7 +87,18 @@ export function registerReviewCommand(
             dependencies.writeData(
               options.format === "json"
                 ? result
-                : result.summary,
+                : {
+                    kind: "review",
+                    repository: result.targetRepo,
+                    prNumber: result.prNumber,
+                    title: result.title,
+                    state: result.state,
+                    author: result.author,
+                    baseRef: result.baseRef,
+                    headRef: result.headRef,
+                    findings: result.findings,
+                    summary: result.summary,
+                  },
             );
           } else {
             const outputPath = resolve(

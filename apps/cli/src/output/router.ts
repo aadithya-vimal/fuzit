@@ -1,6 +1,7 @@
 import type { Diagnostic } from "@fuzit/schemas";
 
 import { redactSensitiveText } from "./redact.js";
+import { formatHumanValue } from "./presentation.js";
 
 export interface OutputIo {
   readonly writeOut: (value: string) => void;
@@ -45,7 +46,8 @@ export function createOutputRouter(io: OutputIo, options: OutputOptions) {
       } else if (typeof value === "string") {
         io.writeOut(value.endsWith("\n") ? value : `${value}\n`);
       } else {
-        io.writeOut(`${JSON.stringify(value)}\n`);
+        const formatted = formatHumanValue(value);
+        io.writeOut(`${formatted ?? JSON.stringify(value, null, 2)}\n`);
       }
     },
 
