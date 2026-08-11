@@ -64,8 +64,8 @@ try {
   if (tarballs.length !== packageDirectories.length)
     throw new Error("Not every public npm package produced a tarball.");
   const cliTarball = tarballs.find((path) =>
-  /fuzit-cli-\d+\.\d+\.\d+\.tgz$/.test(path),
-);
+    /fuzit-cli-\d+\.\d+\.\d+\.tgz$/.test(path),
+  );
   if (cliTarball === undefined) throw new Error("CLI tarball missing.");
   const contents = run("tar", ["-tf", cliTarball]);
   for (const required of [
@@ -203,13 +203,13 @@ try {
     PATH: `${executableDirectory}${delimiter}${process.env.PATH ?? ""}`,
   };
   const installedCli = join(
-  installation,
-  "node_modules",
-  "@fuzit",
-  "cli",
-  "dist",
-  "bin.js",
-);
+    installation,
+    "node_modules",
+    "@fuzit",
+    "cli",
+    "dist",
+    "bin.js",
+  );
   run(process.execPath, [installedCli, "--help"], {
     cwd: installation,
     env: environment,
