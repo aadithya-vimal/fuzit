@@ -512,4 +512,37 @@ export function registerPluginCommand(
         hasFailures ? EXIT_CODES.environment : EXIT_CODES.success,
       );
     });
+
+  pluginCmd
+    .command("mcp")
+    .description("inspect or generate Model Context Protocol server configuration")
+    .action(async () => {
+      const config = {
+        mcpServers: {
+          fuzit: {
+            command: "fuzit",
+            args: ["plugin", "mcp"],
+            env: { FUZIT_CACHE_HOME: ".cache" },
+          },
+        },
+        tools: [
+          { name: "fuzit_pack", description: "Create security-filtered context bundle" },
+          { name: "fuzit_graph", description: "Query local repository context graph" },
+        ],
+      };
+
+      if (dependencies.json) {
+        dependencies.writeData(config);
+      } else {
+        dependencies.writeData(
+          [
+            "Fuzit · Model Context Protocol (MCP) Configuration",
+            "Server Command: fuzit plugin mcp",
+            "Supported Tools: fuzit_pack, fuzit_graph",
+            "MCP Config Schema: .vscode/mcp.json",
+          ].join("\n"),
+        );
+      }
+      dependencies.setExitCode(EXIT_CODES.success);
+    });
 }

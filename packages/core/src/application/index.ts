@@ -10,3 +10,5 @@ export * from "./remote-source/local-enrichment.js";
 
 export * from "./review/pr-review-runner.js";
 export * from "./issue/issue-runner.js";
+export * from "./transform/code-transform.js";
+export * from "./transform/split-output.js";

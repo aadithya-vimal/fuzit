@@ -4,9 +4,12 @@ export function registerProfileCommand(
   program: Command,
   writeData: (value: unknown) => void,
 ) {
-  program
+  const profile = program
     .command("profile")
     .description("display built-in profiles")
+    .action(() => writeData(BUILT_IN_PROFILES));
+
+  profile
     .command("list")
     .option("--json")
     .action(() => writeData(BUILT_IN_PROFILES));

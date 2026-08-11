@@ -557,6 +557,36 @@ function formatRepositoryRoots(value: MaybeRecord, theme: Theme): string {
   ]);
 }
 
+function formatIssueResult(value: MaybeRecord, theme: Theme): string {
+  const result = (value.result as MaybeRecord) ?? value;
+  const lines: string[] = [];
+  if (result.targetRepo || value.repository) {
+    lines.push(pair("Repository", truncate(String(result.targetRepo ?? value.repository ?? ""), 55)));
+  }
+  if (result.issueNumber || value.issueNumber) {
+    lines.push(pair("Issue", `#${String(result.issueNumber ?? value.issueNumber ?? "")}`));
+  }
+  if (typeof result.title === "string") lines.push(pair("Title", truncate(result.title, 55)));
+  if (typeof result.state === "string") lines.push(pair("State", result.state.toUpperCase()));
+  if (typeof result.author === "string") lines.push(pair("Author", result.author));
+  if (typeof value.output === "string") lines.push(pair("Output", truncate(value.output, 55)));
+  return box(theme, "Fuzit · GitHub Issue", lines);
+}
+
+function formatInitPlanBox(value: MaybeRecord, theme: Theme): string {
+  const changes = Array.isArray(value.changes) ? value.changes : [];
+  const lines: string[] = [
+    pair("Status", value.applied ? paint(theme, ANSI.green, "APPLIED") : "DRY RUN"),
+    pair("Changes", String(changes.length)),
+    "",
+  ];
+  for (const c of (changes as MaybeRecord[]).slice(0, 15)) {
+    const action = String(c.action ?? "create").toUpperCase();
+    lines.push(`  ${action.padEnd(8)} ${truncate(String(c.path ?? ""), 55)}`);
+  }
+  return box(theme, "Fuzit · Project Initialization", lines);
+}
+
 // ---------------------------------------------------------------------------
 // Main dispatch
 // ---------------------------------------------------------------------------
@@ -566,8 +596,14 @@ export function formatHumanValue(value: unknown, themeOverrides?: Partial<Theme>
   const theme = resolveTheme(themeOverrides);
 
   if (Array.isArray(value)) {
-    if (value.length === 0 || (typeof value[0] === "object" && value[0] !== null && "repositoryRevision" in (value[0] as MaybeRecord))) {
-      return formatSnapshotList(value, theme);
+    if (value.length > 0 && typeof value[0] === "object" && value[0] !== null) {
+      const first = value[0] as MaybeRecord;
+      if ("repositoryRevision" in first) {
+        return formatSnapshotList(value, theme);
+      }
+      if ("weights" in first || "expansion" in first || "id" in first) {
+        return formatProfileList(value, theme);
+      }
     }
     return null;
   }
@@ -628,6 +664,9 @@ export function formatHumanValue(value: unknown, themeOverrides?: Partial<Theme>
   if ("status" in record && "checks" in record && Array.isArray(record.checks)) {
     return formatDoctorReport(record as Parameters<typeof formatDoctorReport>[0], theme);
   }
+  if ("changes" in record && Array.isArray(record.changes) && "applied" in record) {
+    return formatInitPlanBox(record, theme);
+  }
   if ("changes" in record && Array.isArray(record.changes)) {
     return formatGitStatus(record, theme);
   }
@@ -639,6 +678,9 @@ export function formatHumanValue(value: unknown, themeOverrides?: Partial<Theme>
   }
   if ("lines" in record && Array.isArray(record.lines)) {
     return formatGitBlame(record, theme);
+  }
+  if ("issueNumber" in record || ("output" in record && "result" in record)) {
+    return formatIssueResult(record, theme);
   }
   if ("output" in record && "selected" in record && "report" in record) {
     return formatContextResult(record, theme);

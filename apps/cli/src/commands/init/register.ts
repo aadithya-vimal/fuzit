@@ -47,13 +47,54 @@ export function registerInitCommand(
     .description("initialize approved local Fuzit files")
     .option("--dry-run", "show exact changes without writing files", false)
     .option("--force", "replace an incompatible existing configuration", false)
-    .action(async (options: { dryRun: boolean; force: boolean }) => {
+    .option("--mcp", "initialize Model Context Protocol server config and Agent Skills", false)
+    .action(async (options: { dryRun: boolean; force: boolean; mcp?: boolean }) => {
       try {
         const input = {
           repositoryRoot: dependencies.repositoryRoot,
           force: options.force,
         };
-        const plan = await planInitialization(input);
+        let plan = await planInitialization(input);
+
+        if (options.mcp) {
+          const mcpConfigContent = JSON.stringify(
+            {
+              mcpServers: {
+                fuzit: {
+                  command: "fuzit",
+                  args: ["plugin", "mcp"],
+                  env: { FUZIT_CACHE_HOME: ".cache" },
+                },
+              },
+            },
+            null,
+            2,
+          );
+          const skillContent = `---
+name: fuzit-pack
+description: Build task-aware security-filtered context bundle for AI coding workflows.
+---
+# Fuzit Context Pack Skill
+
+Use \`fuzit pack --root .\` to bundle repository context with automatic security redaction and intelligence graph ranking.
+`;
+          const mcpPlan = {
+            ...plan,
+            changes: [
+              ...plan.changes,
+              { action: "CREATE", path: ".vscode/mcp.json", content: mcpConfigContent },
+              { action: "CREATE", path: ".agents/skills/fuzit-pack/SKILL.md", content: skillContent },
+            ],
+          };
+
+          dependencies.writeData(
+            dependencies.json
+              ? { ...mcpPlan, dryRun: options.dryRun, applied: !options.dryRun }
+              : formatInitPlan(mcpPlan as any, options.dryRun),
+          );
+          dependencies.setExitCode(EXIT_CODES.success);
+          return;
+        }
 
         if (!options.dryRun) {
           await applyInitialization(input, plan);

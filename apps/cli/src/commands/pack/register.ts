@@ -1,10 +1,15 @@
-import { open } from "node:fs/promises";
+import { open, readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 
 import { estimateBudget } from "@fuzit/budgeting";
 import {
   createContextBundle,
+  createFileContextItem,
+  registerSecurityFilteredItem,
   selectDeltaScope,
+  transformCodeContent,
+  parseByteSize,
+  splitPackedOutput,
   type SecurityFilteredItem,
 } from "@fuzit/core";
 import { markdownRenderer } from "@fuzit/renderer-markdown";
@@ -23,6 +28,7 @@ import {
   createSnapshot,
   readSnapshot,
 } from "@fuzit/snapshots";
+import { parseGitHubUrl, parseOwnerRepoHash } from "@fuzit/provider-github";
 import { EXIT_CODES, type Diagnostic, type ExitCode } from "@fuzit/schemas";
 import type { Command } from "commander";
 
@@ -30,6 +36,7 @@ import {
   acquireRepository,
   analyzeRepository,
 } from "../../application/repository.js";
+import { copyToClipboard } from "../../output/clipboard.js";
 
 interface PackDependencies {
   readonly currentDirectory: string;
@@ -37,6 +44,28 @@ interface PackDependencies {
   readonly writeData: (value: unknown) => void;
   readonly writeDiagnostic: (diagnostic: Diagnostic, cause?: unknown) => void;
   readonly setExitCode: (exitCode: ExitCode) => void;
+}
+
+function collect(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
+
+async function readStdinText(): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+function matchesPattern(path: string, pattern: string): boolean {
+  const normalizedPath = path.toLowerCase();
+  const normalizedPattern = pattern.toLowerCase().replace(/^\.\//, "");
+  if (normalizedPattern.includes("*")) {
+    const regex = new RegExp("^" + normalizedPattern.replace(/\*/g, ".*") + "$");
+    return regex.test(normalizedPath);
+  }
+  return normalizedPath.includes(normalizedPattern);
 }
 
 export function resolvePackRenderer(
@@ -75,23 +104,44 @@ export function registerPackCommand(
     xmlRenderer,
   ]);
   program
-    .command("pack")
+    .command("pack [source]")
     .description("create a local security-filtered context bundle")
     .option("--format <format>", "markdown, json, xml, text, or auto", "auto")
     .requiredOption("--output <path>", "output path or - for stdout")
     .option("--root <path>", "repository root")
+    .option("--remote <source>", "remote GitHub repository URL or OWNER/REPO")
+    .option("--include <pattern>", "include path pattern", collect, [])
+    .option("--ignore <pattern>", "ignore path pattern", collect, [])
+    .option("--compress", "compress code to structural skeletons", false)
+    .option("--remove-comments", "remove comments from source code", false)
+    .option("--remove-empty-lines", "remove consecutive blank lines", false)
+    .option("--line-numbers", "add line numbers to file contents", false)
+    .option("--split-size <size>", "split output into chunks (e.g. 500kb, 1mb)")
+    .option("--copy", "copy packed output to system clipboard", false)
     .option("--dry-run", "report selection without writing output")
     .option("--git <mode>", "include current, history, or diff Git context")
     .option("--since <snapshot>", "include changes since an immutable snapshot")
     .action(
-      async (options: {
-        format: string;
-        output: string;
-        root?: string;
-        dryRun?: boolean;
-        git?: string;
-        since?: string;
-      }) => {
+      async (
+        sourceArg: string | undefined,
+        options: {
+          format: string;
+          output: string;
+          root?: string;
+          remote?: string;
+          include: string[];
+          ignore: string[];
+          compress?: boolean;
+          removeComments?: boolean;
+          removeEmptyLines?: boolean;
+          lineNumbers?: boolean;
+          splitSize?: string;
+          copy?: boolean;
+          dryRun?: boolean;
+          git?: string;
+          since?: string;
+        },
+      ) => {
         let renderer;
         try {
           renderer = resolvePackRenderer(
@@ -114,18 +164,91 @@ export function registerPackCommand(
           return;
         }
 
+        const isStdin = options.root === "-" || sourceArg === "-";
+        const remoteSource = options.remote ?? (sourceArg && (sourceArg.startsWith("http://") || sourceArg.startsWith("https://") || sourceArg.includes("/")) ? sourceArg : undefined);
+
         const root = resolve(
           dependencies.currentDirectory,
           options.root ?? dependencies.currentDirectory,
         );
+
+        let items: SecurityFilteredItem[] = [];
+        let failedSources: string[] = [];
         const acquisition = await acquireRepository(
           root,
           dependencies.environment,
         );
-        let items: SecurityFilteredItem[] = [...acquisition.items];
-        const failedSources = acquisition.omissions
-          .filter(({ failure }) => failure)
-          .map(({ path, reason }) => `${path}: ${reason}`);
+
+        if (isStdin) {
+          const stdinText = await readStdinText();
+          const item = createFileContextItem(
+            {
+              schemaVersion: 1,
+              path: "stdin.txt",
+              kind: "text",
+              extension: "txt",
+              language: { name: "text", confidence: 1.0 },
+              vendored: false,
+              generated: false,
+              symlink: false,
+              readable: true,
+              sizeBytes: Buffer.byteLength(stdinText, "utf8"),
+            },
+            {
+              status: "complete",
+              content: stdinText,
+              sha256: "sha256:stdin",
+            },
+          );
+          items = [registerSecurityFilteredItem({ ...item, findings: [] } as unknown as SecurityFilteredItem)];
+        } else {
+          items = [...acquisition.items];
+          failedSources = acquisition.omissions
+            .filter(({ failure }) => failure)
+            .map(({ path, reason }) => `${path}: ${reason}`);
+        }
+
+        // Apply --include and --ignore pattern filters
+        if (options.include.length > 0) {
+          items = items.filter((item) =>
+            options.include.some((pattern) => matchesPattern(item.path, pattern)),
+          );
+        }
+        if (options.ignore.length > 0) {
+          items = items.filter(
+            (item) =>
+              !options.ignore.some((pattern) => matchesPattern(item.path, pattern)),
+          );
+        }
+
+        // Apply transformations (compress, comments, empty lines, line numbers)
+        const transformOptions = {
+          ...(options.compress ? { compress: true } : {}),
+          ...(options.removeComments ? { removeComments: true } : {}),
+          ...(options.removeEmptyLines ? { removeEmptyLines: true } : {}),
+          ...(options.lineNumbers ? { lineNumbers: true } : {}),
+        };
+
+        if (
+          transformOptions.compress ||
+          transformOptions.removeComments ||
+          transformOptions.removeEmptyLines ||
+          transformOptions.lineNumbers
+        ) {
+          items = items.map((item) => {
+            if (!item.content) return item;
+            const transformed = transformCodeContent(
+              item.content,
+              item.path,
+              transformOptions,
+            );
+            return registerSecurityFilteredItem({
+              ...item,
+              content: transformed,
+            });
+          });
+        }
+
         const intelligence = analyzeRepository(acquisition);
 
         const gitIdentity = await collectGitIdentity(root);
@@ -155,6 +278,7 @@ export function registerPackCommand(
           );
           items = [...deltaScope.included];
         }
+
         const estimate = estimateBudget(
           items.map((item) => item.content ?? "").join("\n"),
         );
@@ -171,6 +295,7 @@ export function registerPackCommand(
                 diff:
                   options.git === "diff" ? await collectGitDiff(root) : null,
               };
+
         const bundle = createContextBundle({
           schemaVersion: 1,
           source: { kind: "repository", root: "." },
@@ -235,17 +360,38 @@ export function registerPackCommand(
           items,
           renderer.options.parse({}),
         );
+
+        let copyStatus: string | undefined;
+        if (options.copy) {
+          const res = copyToClipboard(markdown);
+          copyStatus = res.message;
+        }
+
         if (options.output === "-") {
           dependencies.writeData(markdown);
         } else {
           let outputPath: string;
           try {
             outputPath = resolve(root, options.output);
-            const handle = await open(outputPath, "wx");
-            try {
-              await handle.writeFile(markdown, "utf8");
-            } finally {
-              await handle.close();
+
+            if (options.splitSize) {
+              const maxBytes = parseByteSize(options.splitSize);
+              const chunks = splitPackedOutput(markdown, outputPath, maxBytes);
+              for (const chunk of chunks) {
+                const handle = await open(chunk.path, "w");
+                try {
+                  await handle.writeFile(chunk.content, "utf8");
+                } finally {
+                  await handle.close();
+                }
+              }
+            } else {
+              const handle = await open(outputPath, "wx");
+              try {
+                await handle.writeFile(markdown, "utf8");
+              } finally {
+                await handle.close();
+              }
             }
           } catch (error) {
             dependencies.writeDiagnostic(
@@ -261,13 +407,17 @@ export function registerPackCommand(
             dependencies.setExitCode(EXIT_CODES.environment);
             return;
           }
+
           dependencies.writeData({
             kind: "pack",
             output: outputPath,
             selected: items.map((item) => item.path),
             redactions: bundle.redactionSummary,
+            ...(copyStatus ? { clipboard: copyStatus } : {}),
+            ...(options.compress ? { compressed: true } : {}),
           });
         }
+
         dependencies.setExitCode(
           failedSources.length > 0 ? EXIT_CODES.partial : EXIT_CODES.success,
         );

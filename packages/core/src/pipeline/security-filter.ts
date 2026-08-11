@@ -86,3 +86,8 @@ export function assertSecurityFilteredItem(
     throw new TypeError("Renderer input must pass the security pipeline.");
   }
 }
+
+export function registerSecurityFilteredItem<T extends object>(item: T): T {
+  filteredItems.add(item);
+  return item;
+}

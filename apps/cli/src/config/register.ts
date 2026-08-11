@@ -37,7 +37,25 @@ export function registerConfigCommand(
 ): void {
   const config = program
     .command("config")
-    .description("inspect effective configuration");
+    .description("inspect effective configuration")
+    .action(async () => {
+      try {
+        const effectiveConfig = await loadEffectiveConfig({
+          repositoryRoot: dependencies.repositoryRoot,
+          environment: dependencies.environment,
+          cli: {},
+        });
+        dependencies.writeData(effectiveConfig);
+        dependencies.setExitCode(EXIT_CODES.success);
+      } catch (error) {
+        if (error instanceof ConfigLoadError) {
+          dependencies.writeDiagnostic(configDiagnostic(error), error);
+          dependencies.setExitCode(EXIT_CODES.validation);
+          return;
+        }
+        throw error;
+      }
+    });
 
   config
     .command("show")

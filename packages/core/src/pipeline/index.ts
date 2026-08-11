@@ -1,5 +1,6 @@
 export {
   assertSecurityFilteredItem,
+  registerSecurityFilteredItem,
   securityFilter,
   type SecurityFilteredItem,
   type SecurityFilterInput,

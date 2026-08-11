@@ -14,7 +14,7 @@ Commands:
   doctor                                    report local environment readiness
   init [options]                            initialize approved local Fuzit files
   scan [options]                            inspect repository discovery metadata
-  pack [options]                            create a local security-filtered context bundle
+  pack [options] [source]                   create a local security-filtered context bundle
   git                                       inspect local Git context
   cache                                     Manage the local index.
   snapshot                                  Manage snapshots.
