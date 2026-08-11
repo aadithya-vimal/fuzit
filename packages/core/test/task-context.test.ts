@@ -75,4 +75,52 @@ describe("task-aware context ranking", () => {
 
     expect(result.selected.map(({ path }) => path)).toEqual(["src/auth.js"]);
   });
+
+  it("packs current auth architecture, implementation, and tests ahead of history", async () => {
+    const result = createTaskContext({
+      items: [
+        await item(
+          "docs/archive/NEON_AUTH_MIGRATION_REPORT.md",
+          "# Historical authentication architecture\nThis archived migration report is non-authoritative.",
+        ),
+        await item(
+          "docs/AUTH.md",
+          "# Authentication Architecture\nCurrent authentication uses Neon JWT verification in backend/app/core/security.py.",
+        ),
+        await item(
+          "backend/app/core/security.py",
+          "import jwt\ndef get_current_user(token): return verify_neon_auth_jwt(token)",
+        ),
+        await item(
+          "backend/tests/test_neon_auth_security.py",
+          "def test_authentication_rejects_invalid_jwt(): assert security()",
+        ),
+        await item(
+          "docs/STATUS.md",
+          "authentication architecture implementation tests ".repeat(1_000),
+        ),
+        await item(
+          "fuzit-context.md",
+          "# Fuzit context\n\nauthentication architecture implementation tests ".repeat(
+            100,
+          ),
+          true,
+        ),
+      ],
+      task: "Explain the authentication architecture and identify the implementation and tests",
+      profile: getProfile("architecture-review"),
+      budgetTokens: 500,
+      explain: true,
+    });
+
+    const selected = result.selected.map(({ path }) => path);
+    expect(selected).toContain("docs/AUTH.md");
+    expect(selected).toContain("backend/app/core/security.py");
+    expect(selected).toContain("backend/tests/test_neon_auth_security.py");
+    expect(selected).not.toContain("docs/STATUS.md");
+    expect(selected).not.toContain(
+      "docs/archive/NEON_AUTH_MIGRATION_REPORT.md",
+    );
+    expect(selected).not.toContain("fuzit-context.md");
+  });
 });
