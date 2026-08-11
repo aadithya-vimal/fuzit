@@ -102,7 +102,8 @@ describe("graph CLI", () => {
     ]);
     expect(neighbors.exitCode).toBe(0);
     expect(neighbors.stdout).toContain("file\tsrc/a.ts");
-    expect(neighbors.stderr).toBe("");
+    expect(neighbors.stderr).toContain("Building repository graph");
+    expect(neighbors.stderr).toContain("graph complete");
   });
   it("routes partial diagnostics to stderr and preserves safe stdout", async () => {
     const result = await run(
@@ -111,7 +112,10 @@ describe("graph CLI", () => {
     );
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toBe("file\tsrc/a.ts\n");
-    expect(result.stderr).toBe("warning GRAPH.PARTIAL: parser unavailable\n");
+    expect(result.stderr).toContain(
+      "warning GRAPH.PARTIAL: parser unavailable\n",
+    );
+    expect(result.stderr).toContain("graph complete");
   });
   it("uses validation exit codes for bounds and root escape", async () => {
     const bounded = await run([

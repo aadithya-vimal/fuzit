@@ -33,7 +33,9 @@ describe("pack Markdown v1", () => {
   it("supports stdout and zero files", async () => {
     const root = await mkdtemp(join(tmpdir(), "fuzit-pack-"));
     const result = await run(root, "-");
-    expect(result).toMatchObject({ exitCode: 0, stderr: "" });
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toContain("Packing repository");
+    expect(result.stderr).toContain("pack complete");
     expect(result.stdout).toContain("# Fuzit Context Bundle");
   });
 
