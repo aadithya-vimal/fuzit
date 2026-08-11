@@ -107,7 +107,7 @@ export function registerPackCommand(
     .command("pack [source]")
     .description("create a local security-filtered context bundle")
     .option("--format <format>", "markdown, json, xml, text, or auto", "auto")
-    .requiredOption("--output <path>", "output path or - for stdout")
+    .option("--output <path>", "output path or - for stdout", "fuzit-pack.md")
     .option("--root <path>", "repository root")
     .option("--remote <source>", "remote GitHub repository URL or OWNER/REPO")
     .option("--include <pattern>", "include path pattern", collect, [])
