@@ -199,6 +199,7 @@ export async function runCli(
   });
   registerGraphCommand(program, {
     repositoryRoot: runtime.repositoryRoot ?? process.cwd(),
+    environment: runtime.environment ?? process.env,
     json: jsonRequested,
     writeData: output.writeData,
     writeDiagnostic: output.writeDiagnostic,

@@ -64,6 +64,17 @@ async function run(args: readonly string[], partial = false) {
 }
 
 describe("graph CLI", () => {
+  it("builds graph statistics directly from a repository", async () => {
+    const result = await run(["--json", "graph", "stats"]);
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      schemaVersion: 1,
+      nodes: expect.any(Number),
+      edges: expect.any(Number),
+    });
+    expect(result.stderr).toBe("");
+  });
+
   it("returns deterministic JSON stats and human neighbors", async () => {
     const stats = await run([
       "--json",

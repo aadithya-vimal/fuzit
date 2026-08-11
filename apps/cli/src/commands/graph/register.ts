@@ -1,6 +1,8 @@
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
+import { createHash } from "node:crypto";
 import {
+  buildFilePackageGraph,
   graphImpact,
   graphNeighbors,
   graphQuery,
@@ -16,9 +18,14 @@ import {
   type GraphNodeKind,
 } from "@fuzit/schemas";
 import type { Command } from "commander";
+import {
+  acquireRepository,
+  repositoryIdentity,
+} from "../../application/repository.js";
 
 interface GraphCommandDependencies {
   readonly repositoryRoot: string;
+  readonly environment: Readonly<Record<string, string | undefined>>;
   readonly json: boolean;
   readonly writeData: (value: unknown) => void;
   readonly writeDiagnostic: (value: Diagnostic) => void;
@@ -44,7 +51,9 @@ async function loadGraph(root: string, input: string): Promise<GraphSnapshot> {
     isAbsolute(rel)
   )
     throw new Error("Graph input must remain inside the repository root");
-  const value: unknown = JSON.parse(await readFile(path, "utf8"));
+  const value: unknown = JSON.parse(
+    (await readFile(path, "utf8")).replace(/^\uFEFF/, ""),
+  );
   if (
     !value ||
     typeof value !== "object" ||
@@ -70,6 +79,41 @@ async function loadGraph(root: string, input: string): Promise<GraphSnapshot> {
         : "complete",
   };
 }
+async function buildRepositoryGraph(
+  root: string,
+  environment: Readonly<Record<string, string | undefined>>,
+): Promise<GraphSnapshot> {
+  const acquisition = await acquireRepository(root, environment);
+  const identity = await repositoryIdentity(root);
+  const hash = (value: string) =>
+    createHash("sha256").update(value).digest("hex");
+  const repositoryId = `sha256:${hash(identity.fingerprint)}` as const;
+  return buildFilePackageGraph({
+    analysis: {
+      schemaVersion: 1,
+      repositoryId,
+      analysisIdentity: `analysis:repository:${hash(identity.fingerprint)}`,
+      files: acquisition.items.map((item) => ({
+        id: `analysis:file:${hash(item.path)}`,
+        repositoryId,
+        kind: "file" as const,
+        path: item.path,
+        language: "text",
+        contentHash: `sha256:${item.sha256}`,
+      })),
+      modules: [],
+      symbols: [],
+      relationships: [],
+      completeness: acquisition.complete ? "complete" : "partial",
+      diagnostics: acquisition.omissions
+        .filter(({ failure }) => failure)
+        .map(({ path, reason }) => `${path}: ${reason}`)
+        .slice(0, 128),
+    },
+    revision: identity.revision ?? `working-tree:${identity.fingerprint}`,
+    packages: [],
+  });
+}
 const humanNodes = (result: ReturnType<typeof graphQuery>) =>
   [
     ...result.nodes.map((node) => `${node.kind}\t${node.path ?? node.id}`),
@@ -83,13 +127,16 @@ export function registerGraphCommand(
     .command("graph")
     .description("query a bounded local context graph");
   const input = (command: Command) =>
-    command.requiredOption(
-      "--input <path>",
-      "repository-relative graph JSON path",
-    );
+    command
+      .option(
+        "--input <path>",
+        "repository-relative graph JSON path; defaults to building from --root",
+      )
+      .option("--root <path>", "repository root", ".");
   const run = async (
     options: {
-      input: string;
+      input?: string;
+      root?: string;
       node?: string;
       depth?: string;
       limit?: string;
@@ -98,10 +145,10 @@ export function registerGraphCommand(
     operation: "stats" | "neighbors" | "impact" | "query",
   ) => {
     try {
-      const snapshot = await loadGraph(
-        dependencies.repositoryRoot,
-        options.input,
-      );
+      const root = resolve(dependencies.repositoryRoot, options.root ?? ".");
+      const snapshot = options.input
+        ? await loadGraph(root, options.input)
+        : await buildRepositoryGraph(root, dependencies.environment);
       const limits = {
         depth: Number(options.depth ?? 1),
         maxItems: Number(options.limit ?? 100),
@@ -140,6 +187,45 @@ export function registerGraphCommand(
       dependencies.setExitCode(EXIT_CODES.validation);
     }
   };
+  graph
+    .command("build")
+    .description("build a repository graph snapshot")
+    .option("--root <path>", "repository root", ".")
+    .option("--output <path>", "output graph JSON", ".fuzit/graph.json")
+    .action(async (options: { root: string; output: string }) => {
+      try {
+        const root = resolve(dependencies.repositoryRoot, options.root);
+        const snapshot = await buildRepositoryGraph(
+          root,
+          dependencies.environment,
+        );
+        const output = resolve(root, options.output);
+        const rel = relative(root, output);
+        if (rel.startsWith("..") || isAbsolute(rel))
+          throw new Error(
+            "Graph output must remain inside the repository root",
+          );
+        await mkdir(resolve(output, ".."), { recursive: true });
+        await writeFile(output, `${JSON.stringify(snapshot, null, 2)}\n`, {
+          encoding: "utf8",
+          flag: "wx",
+        });
+        dependencies.writeData({
+          output,
+          nodes: snapshot.nodes.length,
+          edges: snapshot.edges.length,
+          completeness: snapshot.completeness,
+        });
+      } catch (error) {
+        dependencies.writeDiagnostic(
+          diagnostic(
+            "error",
+            error instanceof Error ? error.message : String(error),
+          ),
+        );
+        dependencies.setExitCode(EXIT_CODES.validation);
+      }
+    });
   input(
     graph.command("stats").description("show deterministic graph statistics"),
   ).action((options) => run(options, "stats"));
