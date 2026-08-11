@@ -2,7 +2,7 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { runCli } from "fuzit";
+import { runCli } from "../../apps/cli/src/cli.js";
 
 describe("fuzit watch CLI command", () => {
   it("executes fuzit watch --status --json returning valid watcher status object", async () => {

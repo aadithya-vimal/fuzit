@@ -1,3 +1,7 @@
+import {
+  assertSecurityFilteredItem,
+  type SecurityFilteredItem,
+} from "@fuzit/core";
 import { noRendererOptions, type Renderer } from "@fuzit/renderer-core";
 import { contextBundleSchema, type ContextBundle } from "@fuzit/schemas";
 
@@ -10,25 +14,89 @@ function escapeXml(value: string): string {
     .replaceAll("'", "&apos;");
 }
 
-function element(name: string, value: unknown): string {
-  if (value === null) return `<${name}/>`;
-  if (Array.isArray(value))
-    return `<${name}>${value.map((item) => element("item", item)).join("")}</${name}>`;
-  if (typeof value === "object")
-    return `<${name}>${Object.entries(value)
-      .map(([key, child]) => element(key, child))
-      .join("")}</${name}>`;
-  return `<${name}>${escapeXml(String(value))}</${name}>`;
-}
-
-export function renderXml(bundle: ContextBundle): string {
+export function renderXml(
+  bundle: ContextBundle,
+  items: readonly SecurityFilteredItem[] = [],
+): string {
   const validated = contextBundleSchema.parse(bundle);
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<contextBundle version="1">${Object.entries(
-    validated,
-  )
-    .filter(([key]) => key !== "schemaVersion")
-    .map(([key, value]) => element(key, value))
-    .join("")}</contextBundle>\n`;
+  for (const item of items) assertSecurityFilteredItem(item);
+
+  const ordered = [...items].sort((left, right) =>
+    left.path.localeCompare(right.path, "en"),
+  );
+
+  const lines: string[] = ['<?xml version="1.0" encoding="UTF-8"?>'];
+  lines.push(`<contextBundle version="1">`);
+
+  if (validated.instruction) {
+    lines.push(`  <instruction>${escapeXml(validated.instruction)}</instruction>`);
+  }
+
+  lines.push(`  <summary>`);
+  lines.push(`    <id>${escapeXml(validated.id)}</id>`);
+  lines.push(`    <root>${escapeXml(validated.source.root)}</root>`);
+  if (validated.revision) {
+    lines.push(`    <revision>${escapeXml(validated.revision)}</revision>`);
+  } else {
+    lines.push(`    <revision/>`);
+  }
+  lines.push(`    <files_count>${ordered.length || validated.items.length}</files_count>`);
+  lines.push(`    <total_bytes>${validated.budget.bytes}</total_bytes>`);
+  lines.push(`    <total_tokens>${validated.budget.tokens}</total_tokens>`);
+
+  if (validated.warnings.length > 0) {
+    lines.push(
+      `    <warnings>${validated.warnings.map((w) => `<warning>${escapeXml(w)}</warning>`).join("")}</warnings>`,
+    );
+  } else {
+    lines.push(`    <warnings></warnings>`);
+  }
+
+  if (validated.failedSources.length > 0) {
+    lines.push(
+      `    <failedSources>${validated.failedSources.map((f) => `<failedSource>${escapeXml(f)}</failedSource>`).join("")}</failedSources>`,
+    );
+  } else {
+    lines.push(`    <failedSources></failedSources>`);
+  }
+  lines.push(`  </summary>`);
+
+  lines.push(`  <manifest>`);
+  const manifestItems = ordered.length > 0 ? ordered : validated.items;
+  for (const item of manifestItems) {
+    const status = "contentStatus" in item ? item.contentStatus : "complete";
+    lines.push(
+      `    <file_entry path="${escapeXml(item.path)}" status="${escapeXml(status)}" />`,
+    );
+  }
+  lines.push(`  </manifest>`);
+
+  lines.push(`  <files>`);
+  if (ordered.length > 0) {
+    for (const item of ordered) {
+      const status = item.contentStatus;
+      const redacted = item.findings.length > 0;
+      lines.push(
+        `    <file path="${escapeXml(item.path)}" content_status="${status}" redacted="${redacted}">`,
+      );
+      if (item.contentStatus === "omitted" || item.content === null) {
+        lines.push(`[CONTENT OMITTED]`);
+      } else {
+        lines.push(escapeXml(item.content));
+      }
+      lines.push(`    </file>`);
+    }
+  } else {
+    for (const item of validated.items) {
+      lines.push(
+        `    <file path="${escapeXml(item.path)}" content_status="${item.contentStatus}" redacted="${item.redacted}" />`,
+      );
+    }
+  }
+  lines.push(`  </files>`);
+
+  lines.push(`</contextBundle>\n`);
+  return lines.join("\n");
 }
 
 export const xmlRenderer: Renderer = {
@@ -41,5 +109,5 @@ export const xmlRenderer: Renderer = {
     deterministic: true,
   },
   options: noRendererOptions,
-  render: (bundle) => renderXml(bundle),
+  render: (bundle, items) => renderXml(bundle, items),
 };

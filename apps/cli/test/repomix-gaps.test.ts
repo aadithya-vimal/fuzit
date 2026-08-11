@@ -129,6 +129,8 @@ describe("Repomix Gaps Feature Suite", () => {
         const xmlExists = await readFile(join(root, "fuzit-pack.xml"), "utf8");
         expect(mdExists).toContain("main.ts");
         expect(xmlExists).toContain("<contextBundle");
+        expect(xmlExists).toContain('<file path="main.ts"');
+        expect(xmlExists).toContain("console.log(&apos;hello&apos;);");
       } finally {
         await rm(root, { recursive: true, force: true });
       }

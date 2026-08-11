@@ -103,7 +103,7 @@ importers:
         version: 10.8.0
       fuzit:
         specifier: workspace:*
-        version: link:apps/cli
+        version: link:apps/vscode-extension
       prettier:
         specifier: 3.9.6
         version: 3.9.6
@@ -426,6 +426,9 @@ importers:
 
   packages/renderers/xml:
     dependencies:
+      '@fuzit/core':
+        specifier: workspace:*
+        version: link:../../core
       '@fuzit/renderer-core':
         specifier: workspace:*
         version: link:../core
@@ -482,7 +485,7 @@ importers:
         version: link:../schemas
       fuzit:
         specifier: workspace:*
-        version: link:../../apps/cli
+        version: link:../../apps/vscode-extension
 
   packages/watcher:
     dependencies:

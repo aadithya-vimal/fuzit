@@ -1,8 +1,39 @@
 import { describe, expect, it } from "vitest";
 
-import { createContextBundle } from "@fuzit/core";
+import {
+  createContextBundle,
+  securityFilter,
+  type SecurityFilteredItem,
+} from "@fuzit/core";
 
 import { renderXml } from "../src/index.js";
+
+const digest = "a".repeat(64);
+async function createTestItem(
+  path: string,
+  content: string,
+  status: "complete" | "truncated" | "omitted" = "complete",
+): Promise<SecurityFilteredItem> {
+  const result = await securityFilter({
+    path,
+    readContent: async () => content,
+    createItem: (safe) => ({
+      schemaVersion: 1,
+      id: `file:${digest}`,
+      kind: "file",
+      path,
+      content: status === "omitted" ? null : safe,
+      contentStatus: status,
+      provenance: { source: "scanner", confidenceBasis: "test" },
+      lifecycle: "source",
+      sensitivity: "unclassified",
+      sha256: digest,
+      transformations: [],
+    }),
+  });
+  if (result.status !== "success") throw new Error(result.reason);
+  return result.item;
+}
 
 function bundle(warnings: string[] = []) {
   return createContextBundle({
@@ -13,7 +44,7 @@ function bundle(warnings: string[] = []) {
     redactionSummary: { findings: 0, redactedItems: 0, omittedItems: 0 },
     warnings,
     failedSources: [],
-    budget: { bytes: 0, tokens: 0, truncated: false },
+    budget: { bytes: 100, tokens: 25, truncated: false },
   });
 }
 
@@ -37,5 +68,14 @@ describe("XML renderer", () => {
     expect(output.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(
       true,
     );
+  });
+
+  it("renders explicit LLM-optimized file tags with code contents", async () => {
+    const item = await createTestItem("src/index.ts", "console.log('hello world');");
+    const output = renderXml(bundle(), [item]);
+    expect(output).toContain('<file path="src/index.ts" content_status="complete" redacted="false">');
+    expect(output).toContain("console.log(&apos;hello world&apos;);");
+    expect(output).toContain("</file>");
+    expect(output).toContain('<file_entry path="src/index.ts" status="complete" />');
   });
 });

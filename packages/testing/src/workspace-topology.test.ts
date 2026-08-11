@@ -157,7 +157,7 @@ describe("minimal workspace topology", () => {
       Object.keys(
         manifests.get("@fuzit/renderer-xml")?.dependencies ?? {},
       ).filter((dependency) => dependency.startsWith("@fuzit/")),
-    ).toEqual(["@fuzit/renderer-core", "@fuzit/schemas"]);
+    ).toEqual(["@fuzit/core", "@fuzit/renderer-core", "@fuzit/schemas"]);
     expect(
       Object.keys(
         manifests.get("@fuzit/renderer-json")?.dependencies ?? {},

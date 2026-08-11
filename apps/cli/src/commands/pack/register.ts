@@ -546,7 +546,7 @@ export async function executeDualPack(
   });
 
   const mdContent = markdownRenderer.render(bundle, items, markdownRenderer.options.parse({}));
-  const xmlContent = renderXml(bundle);
+  const xmlContent = renderXml(bundle, items);
 
   const mdPath = resolve(root, "fuzit-pack.md");
   const xmlPath = resolve(root, "fuzit-pack.xml");
