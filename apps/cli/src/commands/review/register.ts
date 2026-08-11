@@ -6,8 +6,9 @@ import {
   parseOwnerRepoHash,
   parseNumericWithRepo,
 } from "@fuzit/provider-github";
-import { inferRemoteFromGitConfig } from "@fuzit/git";
+import { inferRemoteFromGitConfig, runGit } from "@fuzit/git";
 import { EXIT_CODES, type ExitCode } from "@fuzit/schemas";
+import { getProfile } from "@fuzit/profiles";
 import type { Command } from "commander";
 
 export function registerReviewCommand(
@@ -40,6 +41,7 @@ export function registerReviewCommand(
         },
       ) => {
         try {
+          getProfile(options.profile);
           let prRef;
           if (
             sourceArg.startsWith("http://") ||
@@ -66,17 +68,35 @@ export function registerReviewCommand(
             prRef,
             ...(options.task ? { task: options.task } : {}),
             profileName: options.profile,
+            environment: dependencies.environment,
           });
 
+          if (
+            !Number.isInteger(Number(options.budgetTokens)) ||
+            Number(options.budgetTokens) <= 0
+          )
+            throw new Error("budget tokens must be a positive integer");
+          if (!["markdown", "json", "text"].includes(options.format))
+            throw new Error(`unsupported review format '${options.format}'`);
+          const rendered =
+            options.format === "json"
+              ? `${JSON.stringify(result, null, 2)}\n`
+              : `${result.summary}\n`;
+
           if (options.output === "-") {
-            dependencies.writeData(result.summary);
+            dependencies.writeData(
+              options.format === "json" ? result : rendered,
+            );
           } else {
             const outputPath = resolve(
               dependencies.currentDirectory,
               options.output,
             );
             await mkdir(dirname(outputPath), { recursive: true });
-            await writeFile(outputPath, result.summary, "utf8");
+            await writeFile(outputPath, rendered, {
+              encoding: "utf8",
+              flag: "wx",
+            });
             dependencies.writeData({ output: outputPath, result });
           }
         } catch (error) {
@@ -105,6 +125,8 @@ export function registerPrCommand(
     .option("--repo <repo>", "target repository in OWNER/REPO format")
     .option("--task <task>", "override default task")
     .option("--profile <profile>", "profile", "code-review")
+    .option("--budget-tokens <tokens>", "token budget", "12000")
+    .option("--format <format>", "output format", "markdown")
     .option("--output <path>", "output path or '-' for stdout", "-")
     .action(
       async (
@@ -113,10 +135,13 @@ export function registerPrCommand(
           repo?: string;
           task?: string;
           profile: string;
+          budgetTokens: string;
+          format: string;
           output: string;
         },
       ) => {
         try {
+          getProfile(options.profile);
           let prRef;
           if (
             sourceArg.startsWith("http://") ||
@@ -142,9 +167,14 @@ export function registerPrCommand(
               prRef = parsed.ref;
             } else {
               // infer from local clone remotes
-              const inferred = inferRemoteFromGitConfig([
-                { name: "origin", url: "https://github.com/inferred/repo.git" },
-              ]);
+              const remote = await runGit(["remote", "get-url", "origin"], {
+                cwd: dependencies.currentDirectory,
+              });
+              const inferred = remote.ok
+                ? inferRemoteFromGitConfig([
+                    { name: "origin", url: remote.stdout.trim() },
+                  ])
+                : null;
               if (!inferred)
                 throw new Error(
                   "Could not infer repository from local clone; pass --repo OWNER/REPO",
@@ -165,17 +195,34 @@ export function registerPrCommand(
             prRef,
             ...(options.task ? { task: options.task } : {}),
             profileName: options.profile,
+            environment: dependencies.environment,
           });
+          if (
+            !Number.isInteger(Number(options.budgetTokens)) ||
+            Number(options.budgetTokens) <= 0
+          )
+            throw new Error("budget tokens must be a positive integer");
+          if (!["markdown", "json", "text"].includes(options.format))
+            throw new Error(`unsupported review format '${options.format}'`);
+          const rendered =
+            options.format === "json"
+              ? `${JSON.stringify(result, null, 2)}\n`
+              : `${result.summary}\n`;
 
           if (options.output === "-") {
-            dependencies.writeData(result.summary);
+            dependencies.writeData(
+              options.format === "json" ? result : rendered,
+            );
           } else {
             const outputPath = resolve(
               dependencies.currentDirectory,
               options.output,
             );
             await mkdir(dirname(outputPath), { recursive: true });
-            await writeFile(outputPath, result.summary, "utf8");
+            await writeFile(outputPath, rendered, {
+              encoding: "utf8",
+              flag: "wx",
+            });
             dependencies.writeData({ output: outputPath, result });
           }
         } catch (error) {

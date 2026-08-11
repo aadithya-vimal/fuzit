@@ -6,8 +6,9 @@ import {
   parseOwnerRepoHash,
   parseNumericWithRepo,
 } from "@fuzit/provider-github";
-import { inferRemoteFromGitConfig } from "@fuzit/git";
+import { inferRemoteFromGitConfig, runGit } from "@fuzit/git";
 import { EXIT_CODES, type ExitCode } from "@fuzit/schemas";
+import { getProfile } from "@fuzit/profiles";
 import type { Command } from "commander";
 
 export function registerIssueCommand(
@@ -24,7 +25,8 @@ export function registerIssueCommand(
     .description("get context from a GitHub issue")
     .argument("<source>", "Issue URL, OWNER/REPO#NUMBER, or ISSUE-NUMBER")
     .option("--repo <repo>", "target repository in OWNER/REPO format")
-    .option("--profile <profile>", "profile", "default")
+    .option("--profile <profile>", "profile", "bug-fix")
+    .option("--format <format>", "output format", "markdown")
     .option("--output <path>", "output path or '-' for stdout", "-")
     .action(
       async (
@@ -32,10 +34,12 @@ export function registerIssueCommand(
         options: {
           repo?: string;
           profile: string;
+          format: string;
           output: string;
         },
       ) => {
         try {
+          getProfile(options.profile);
           let issueRef;
           if (
             sourceArg.startsWith("http://") ||
@@ -60,9 +64,14 @@ export function registerIssueCommand(
               if (!parsed.ok) throw new Error(parsed.reason);
               issueRef = parsed.ref;
             } else {
-              const inferred = inferRemoteFromGitConfig([
-                { name: "origin", url: "https://github.com/inferred/repo.git" },
-              ]);
+              const remote = await runGit(["remote", "get-url", "origin"], {
+                cwd: dependencies.currentDirectory,
+              });
+              const inferred = remote.ok
+                ? inferRemoteFromGitConfig([
+                    { name: "origin", url: remote.stdout.trim() },
+                  ])
+                : null;
               if (!inferred)
                 throw new Error(
                   "Could not infer repository from local clone; pass --repo OWNER/REPO",
@@ -82,17 +91,29 @@ export function registerIssueCommand(
           const result = await runIssueContext({
             issueRef,
             profileName: options.profile,
+            environment: dependencies.environment,
           });
+          if (!["markdown", "json", "text"].includes(options.format))
+            throw new Error(`unsupported issue format '${options.format}'`);
+          const rendered =
+            options.format === "json"
+              ? `${JSON.stringify(result, null, 2)}\n`
+              : `${result.summary}\n`;
 
           if (options.output === "-") {
-            dependencies.writeData(result.summary);
+            dependencies.writeData(
+              options.format === "json" ? result : rendered,
+            );
           } else {
             const outputPath = resolve(
               dependencies.currentDirectory,
               options.output,
             );
             await mkdir(dirname(outputPath), { recursive: true });
-            await writeFile(outputPath, result.summary, "utf8");
+            await writeFile(outputPath, rendered, {
+              encoding: "utf8",
+              flag: "wx",
+            });
             dependencies.writeData({ output: outputPath, result });
           }
         } catch (error) {
