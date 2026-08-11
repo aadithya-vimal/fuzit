@@ -10,6 +10,7 @@ import { inferRemoteFromGitConfig, runGit } from "@fuzit/git";
 import { EXIT_CODES, type ExitCode } from "@fuzit/schemas";
 import { getProfile } from "@fuzit/profiles";
 import type { Command } from "commander";
+import { executePrPack } from "../pack/register.js";
 
 export function registerReviewCommand(
   program: Command,
@@ -139,14 +140,15 @@ export function registerPrCommand(
 ): void {
   program
     .command("pr")
-    .description("review pull request shorthand")
-    .argument("<source>", "PR number, OWNER/REPO#NUMBER, or PR URL")
+    .description("review pull request or pack PR diff ('fuzit pr pack <url>')")
+    .argument("<source>", "PR number, OWNER/REPO#NUMBER, PR URL, or 'pack <url>'")
     .option("--repo <repo>", "target repository in OWNER/REPO format")
     .option("--task <task>", "override default task")
     .option("--profile <profile>", "profile", "code-review")
     .option("--budget-tokens <tokens>", "token budget", "12000")
     .option("--format <format>", "output format", "markdown")
     .option("--output <path>", "output path or '-' for stdout", "-")
+    .allowExcessArguments(true)
     .action(
       async (
         sourceArg: string,
@@ -158,7 +160,39 @@ export function registerPrCommand(
           format: string;
           output: string;
         },
+        cmd: Command,
       ) => {
+        // ── pr pack <url> subcommand dispatch ─────────────────────────────
+        if (sourceArg === "pack") {
+          const packSource = cmd.args[0];
+          try {
+            if (!packSource) throw new Error("pr pack requires a PR URL or OWNER/REPO#NUMBER");
+            let prUrl: string;
+            if (packSource.startsWith("http://") || packSource.startsWith("https://")) {
+              const parsed = parseGitHubUrl(packSource);
+              if (!parsed.ok || parsed.ref.kind !== "github-pull-request") {
+                throw new Error(`invalid PR URL '${packSource}'`);
+              }
+              prUrl = packSource;
+            } else if (packSource.includes("#")) {
+              const parsed = parseOwnerRepoHash(packSource, "pull-request");
+              if (!parsed.ok) throw new Error(parsed.reason);
+              const ref = parsed.ref;
+              prUrl = `https://github.com/${ref.owner}/${ref.repo}/pull/${ref.number}`;
+            } else {
+              throw new Error(`invalid PR argument '${packSource}'; use a PR URL or OWNER/REPO#NUMBER`);
+            }
+            const outputPath = resolve(dependencies.currentDirectory, options.output === "-" ? "fuzit-pack.md" : options.output);
+            const result = await executePrPack(prUrl, dependencies.environment, outputPath);
+            dependencies.writeData(result);
+          } catch (error) {
+            dependencies.writeData({ error: error instanceof Error ? error.message : String(error) });
+            dependencies.setExitCode(EXIT_CODES.validation);
+          }
+          return;
+        }
+
+        // ── Normal pr review flow ───────────────────────────────────────
         try {
           getProfile(options.profile);
           let prRef;

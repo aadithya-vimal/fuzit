@@ -343,7 +343,8 @@ export async function runCli(
     } else if (route.target === "issue") {
       arguments_ = ["issue", ...arguments_];
     } else if (route.target === "context") {
-      arguments_ = ["context", "--root", firstArg, ...arguments_.slice(1)];
+      // GitHub repo URL → pack the remote repository
+      arguments_ = ["pack", "--remote", firstArg, ...arguments_.slice(1)];
     }
   }
 
