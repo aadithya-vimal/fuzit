@@ -121,19 +121,38 @@ function formatScan(value: MaybeRecord, theme: Theme): string {
 // ---------------------------------------------------------------------------
 
 function formatPack(value: MaybeRecord, theme: Theme): string {
+  const prMeta = value.pr as MaybeRecord | undefined;
   const redactions = value.redactions as MaybeRecord | undefined;
   const findings = Number(redactions?.findings ?? 0);
   const redactedItems = Number(redactions?.redactedItems ?? 0);
   const omittedItems = Number(redactions?.omittedItems ?? 0);
   const selected = (value.selected as unknown[] | undefined) ?? [];
-  const lines = [
+  const lines: string[] = [];
+  if (prMeta && prMeta.repo) lines.push(pair("Repository", String(prMeta.repo)));
+  if (prMeta && prMeta.prNumber) lines.push(pair("Pull Request", `#${prMeta.prNumber}`));
+  lines.push(
     pair("Selected files", String(selected.length)),
     pair("Redaction findings", paint(theme, findings > 0 ? ANSI.yellow : ANSI.green, String(findings))),
     pair("Redacted items", paint(theme, redactedItems > 0 ? ANSI.yellow : ANSI.green, String(redactedItems))),
     pair("Omitted items", paint(theme, omittedItems > 0 ? ANSI.yellow : ANSI.green, String(omittedItems))),
-  ];
+  );
   if (typeof value.output === "string") lines.push("", pair("Output", truncate(value.output, 55)));
-  return box(theme, "Fuzit · Repository Pack", lines);
+  const boxTitle = prMeta ? "Fuzit · Pull Request Pack" : "Fuzit · Repository Pack";
+  return box(theme, boxTitle, lines);
+}
+
+function formatPrPack(value: MaybeRecord, theme: Theme): string {
+  const repo = String(value.repo ?? "");
+  const prNumber = String(value.prNumber ?? "");
+  const files = Number(value.files ?? 0);
+  const tokens = Number(value.tokens ?? 0);
+  const lines: string[] = [];
+  if (repo) lines.push(pair("Repository", repo));
+  if (prNumber) lines.push(pair("Pull Request", `#${prNumber}`));
+  lines.push(pair("Changed files", String(files)));
+  if (tokens > 0) lines.push(pair("Estimated tokens", tokens.toLocaleString("en-US")));
+  if (typeof value.output === "string") lines.push("", pair("Output", truncate(value.output, 55)));
+  return box(theme, "Fuzit · Pull Request Pack", lines);
 }
 
 // ---------------------------------------------------------------------------
@@ -667,6 +686,7 @@ export function formatHumanValue(value: unknown, themeOverrides?: Partial<Theme>
     case "graph-build":  return formatGraphBuild(record, theme);
     case "graph-stats":  return formatGraphStats(record, theme);
     case "pack":         return formatPack(record, theme);
+    case "pr-pack":      return formatPrPack(record, theme);
     case "dual-pack":    return formatDualPack(record, theme);
     case "serve":        return formatServe(record, theme);
     case "apply":        return formatApply(record, theme);
@@ -697,6 +717,9 @@ export function formatHumanValue(value: unknown, themeOverrides?: Partial<Theme>
   }
   if ("selected" in record && "redactions" in record) {
     return formatPack(record, theme);
+  }
+  if ("prNumber" in record && "files" in record) {
+    return formatPrPack(record, theme);
   }
   if ("outputs" in record && "files" in record) {
     return formatDualPack(record, theme);
