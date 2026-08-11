@@ -167,10 +167,16 @@ describe("formatGraphBuild()", () => {
     expect(output).toContain("COMPLETE");
   });
 
-  it("mentions graph built (not Graph Statistics)", () => {
+  it("shows repository graph title, not Graph Statistics", () => {
     const output = formatGraphBuild(buildRecord, ascii);
-    expect(output).toContain("Graph built");
+    // Box title carries the label; no duplicate inner heading
+    expect(output).toContain("Fuzit · Repository Graph");
+    expect(output).toContain("Nodes");
+    expect(output).toContain("Output");
     expect(output).not.toContain("Graph Statistics");
+    // Must not duplicate the title inside the body
+    const occurrences = (output.match(/Repository Graph/g) ?? []).length;
+    expect(occurrences).toBe(1);
   });
 });
 
@@ -210,7 +216,7 @@ describe("formatHumanValue() graph routing", () => {
       ascii,
     );
     expect(result).not.toBeNull();
-    expect(result).toContain("Graph built");
+    expect(result).toContain("Fuzit · Repository Graph");
     expect(result).toContain("/tmp/graph.json");
     expect(result).not.toContain("Graph Statistics");
   });
@@ -278,10 +284,6 @@ describe("formatHumanValue() auth presentation", () => {
   });
 
   it("JSON auth output does not go through box rendering", () => {
-    // The router's JSON branch never calls formatHumanValue.
-    // We verify formatHumanValue itself: if called directly it produces a box,
-    // but JSON mode in the router should produce plain JSON without calling it.
-    // This test confirms the presentation side has no ANSI/box in non-color mode.
     const result = formatHumanValue(
       {
         kind: "auth",
@@ -293,5 +295,184 @@ describe("formatHumanValue() auth presentation", () => {
     );
     expect(result).not.toBeNull();
     expect(result).not.toContain("\u001B["); // no ANSI
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P0 Regression: No duplicate headings
+// ---------------------------------------------------------------------------
+
+describe("P0 regression: No duplicate inner headings", () => {
+  it("formatScan has single title bar, no repeated inner title header", () => {
+    const output = formatHumanValue({
+      schemaVersion: 1,
+      root: "/repo",
+      counts: { files: 10, directories: 2, symlinks: 0 },
+      status: "complete",
+    }, ascii)!;
+    expect(output).toContain("Fuzit · Repository Scan");
+    const count = (output.match(/Repository Scan/g) ?? []).length;
+    expect(count).toBe(1);
+  });
+
+  it("formatPack has single title bar, no repeated inner title header", () => {
+    const output = formatHumanValue({
+      kind: "pack",
+      selected: ["a.ts"],
+      redactions: { findings: 0, redactedItems: 0, omittedItems: 0 },
+      output: "/out.md",
+    }, ascii)!;
+    expect(output).toContain("Fuzit · Repository Pack");
+    const count = (output.match(/Repository Pack/g) ?? []).length;
+    expect(count).toBe(1);
+  });
+
+  it("formatReview has single title bar, no repeated inner title header", () => {
+    const output = formatHumanValue({
+      kind: "review",
+      repository: "owner/repo",
+      prNumber: 42,
+    }, ascii)!;
+    expect(output).toContain("Fuzit · Pull Request Review");
+    const count = (output.match(/Pull Request Review/g) ?? []).length;
+    expect(count).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P1 Human Formatter Coverage
+// ---------------------------------------------------------------------------
+
+describe("P1 Human formatters for remaining commands", () => {
+  it("formats doctor report in a box via structural fingerprinting", () => {
+    const result = formatHumanValue(
+      {
+        status: "ready",
+        checks: [
+          { id: "node", status: "pass", message: "Node version 20.0.0" },
+          { id: "git", status: "pass", message: "Git available" },
+        ],
+      },
+      ascii,
+    )!;
+    expect(result).not.toBeNull();
+    expect(result).toContain("Environment Check");
+    expect(result).toContain("PASS node: Node version 20.0.0");
+  });
+
+  it("formats git status", () => {
+    const result = formatHumanValue(
+      {
+        schemaVersion: 1,
+        changes: [{ path: "src/main.ts", kind: "modified" }],
+      },
+      ascii,
+    )!;
+    expect(result).toContain("Git Status");
+    expect(result).toContain("src/main.ts");
+  });
+
+  it("formats git log", () => {
+    const result = formatHumanValue(
+      {
+        schemaVersion: 1,
+        entries: [
+          { hash: "abc123456789", author: "Alice", message: "feat: add CLI" },
+        ],
+      },
+      ascii,
+    )!;
+    expect(result).toContain("Git Log");
+    expect(result).toContain("abc12345");
+    expect(result).toContain("Alice");
+  });
+
+  it("formats config show", () => {
+    const result = formatHumanValue(
+      {
+        schemaVersion: 1,
+        values: { maxFiles: 120, outputFormat: "markdown" },
+        provenance: { maxFiles: "default", outputFormat: "cli" },
+      },
+      ascii,
+    )!;
+    expect(result).toContain("Effective Configuration");
+    expect(result).toContain("maxFiles");
+    expect(result).toContain("120");
+  });
+
+  it("formats context result", () => {
+    const result = formatHumanValue(
+      {
+        output: "/tmp/context.md",
+        selected: ["a.ts", "b.ts"],
+        report: { budgetTokens: 1000, usedTokens: 500 },
+      },
+      ascii,
+    )!;
+    expect(result).toContain("Task Context");
+    expect(result).toContain("Selected files     2");
+  });
+
+  it("formats review metadata and findings cleanly", () => {
+    const result = formatHumanValue(
+      {
+        kind: "review",
+        repository: "fuzit/fuzit",
+        prNumber: 99,
+        title: "Fix box borders",
+        state: "open",
+        author: "bob",
+        baseRef: "main",
+        headRef: "patch-1",
+        findings: [
+          { severity: "warning", message: "Missing error check" },
+        ],
+      },
+      ascii,
+    )!;
+    expect(result).toContain("fuzit/fuzit");
+    expect(result).toContain("#99");
+    expect(result).toContain("Fix box borders");
+    expect(result).toContain("main ← patch-1");
+    expect(result).toContain("WARNING Missing error check");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P2 Box hardening: Display width & Windows paths
+// ---------------------------------------------------------------------------
+
+describe("P2 Box hardening and width safety", () => {
+  it("truncates extremely long paths so box border does not exceed MAX_BOX_INNER_WIDTH", () => {
+    const longPath = "C:\\Users\\very-long-user-name\\AppData\\Local\\Deeply\\Nested\\Directory\\Path\\That\\Is\\Extremely\\Long\\Project\\File.ts";
+    const result = formatHumanValue(
+      {
+        kind: "review",
+        repository: longPath,
+        prNumber: 1,
+      },
+      ascii,
+    )!;
+    const lines = result.split("\n");
+    const topWidth = lines[0].length;
+    // max inner width is 76, total line length including borders (+ 4) is 80
+    expect(topWidth).toBeLessThanOrEqual(80);
+    for (const line of lines) {
+      expect(line.length).toBe(topWidth);
+    }
+  });
+
+  it("safely handles Windows backslashes in path fields", () => {
+    const winPath = "C:\\projects\\fuzit\\apps\\cli\\src\\index.ts";
+    const result = formatHumanValue(
+      {
+        output: winPath,
+        selected: [winPath],
+        report: { budgetTokens: 500, usedTokens: 200 },
+      },
+      ascii,
+    )!;
+    expect(result).toContain("C:\\projects\\fuzit\\apps");
   });
 });

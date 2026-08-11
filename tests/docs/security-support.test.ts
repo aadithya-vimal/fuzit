@@ -12,7 +12,7 @@ const page = resolve(
 
 async function preview(): Promise<string> {
   let stdout = "";
-  const exitCode = await runCli(["support", "--preview"], {
+  const exitCode = await runCli(["support", "--preview", "--json"], {
     writeOut: (value) => {
       stdout += value;
     },

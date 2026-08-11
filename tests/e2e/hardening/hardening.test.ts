@@ -126,7 +126,7 @@ describe("post-runbook CLI integration", () => {
     const environment = { FUZIT_CACHE_HOME: cache };
     const create = async () => {
       const result = await command(
-        ["snapshot", "create", "--root", root],
+        ["--json", "snapshot", "create", "--root", root],
         root,
         environment,
       );
@@ -155,7 +155,7 @@ describe("post-runbook CLI integration", () => {
     expect(after.dirty).toBe(true);
     expect(repeated.id).toBe(after.id);
     const difference = await command(
-      ["diff", before.id, after.id],
+      ["--json", "diff", before.id, after.id],
       root,
       environment,
     );
@@ -205,7 +205,7 @@ describe("post-runbook CLI integration", () => {
     await mkdir(root);
     await writeFile(join(root, "value.ts"), "export const value = 1;\n");
     const invoke = async (arguments_: readonly string[]) => {
-      const result = await command(arguments_, root, environment);
+      const result = await command(["--json", ...arguments_], root, environment);
       expect(result.exitCode, result.stderr).toBe(0);
       return JSON.parse(result.stdout) as Record<string, unknown>;
     };

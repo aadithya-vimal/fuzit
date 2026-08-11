@@ -47,9 +47,7 @@ export function registerDoctorCommand(
         },
       });
 
-      dependencies.writeData(
-        dependencies.json ? report : formatDoctorReport(report),
-      );
+      dependencies.writeData(report);
       dependencies.setExitCode(
         report.status === "ready" ? EXIT_CODES.success : EXIT_CODES.environment,
       );

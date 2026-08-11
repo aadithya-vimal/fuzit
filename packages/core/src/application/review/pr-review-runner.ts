@@ -74,8 +74,8 @@ export async function runPrReview(
     }
     throw new Error(
       credential.isAuthenticated
-        ? "GitHub resource not accessible with the current credentials."
-        : "GitHub authentication required for this private repository.",
+        ? "GitHub resource not accessible with the current credentials (HTTP 404)."
+        : "GitHub resource not found or not accessible anonymously (HTTP 404).",
     );
   }
   if (metadataResponse.status === 401)
@@ -89,8 +89,8 @@ export async function runPrReview(
   if (metadataResponse.status === 404)
     throw new Error(
       credential.isAuthenticated
-        ? "GitHub resource not accessible with the current credentials."
-        : "GitHub resource not found or not accessible anonymously.",
+        ? "GitHub resource not accessible with the current credentials (HTTP 404)."
+        : "GitHub resource not found or not accessible anonymously (HTTP 404).",
     );
   if (metadataResponse.status !== 200)
     throw new Error(`GitHub PR acquisition failed (HTTP ${metadataResponse.status}).`);

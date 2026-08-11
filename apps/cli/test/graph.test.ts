@@ -296,7 +296,7 @@ describe("graph CLI", () => {
       invocationRoot,
     );
     expect(built.exitCode).toBe(0);
-    expect(built.stdout).toContain("Graph built");
+    expect(built.stdout).toContain("Repository Graph");
     expect(built.stdout).toContain("Nodes");
     expect(built.stdout).toContain("Output");
     expect(() => JSON.parse(built.stdout)).toThrow();

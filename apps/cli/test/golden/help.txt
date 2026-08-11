@@ -23,6 +23,7 @@ Commands:
   context [options]                         build task-aware local context
   explain                                   explain selection evidence
   watch [options]                           Watch repository for changes and update local index
+  auth                                      manage GitHub authentication
   graph                                     query a bounded local context graph
   review [options] <source>                 review a GitHub pull request
   pr [options] <source>                     review pull request shorthand

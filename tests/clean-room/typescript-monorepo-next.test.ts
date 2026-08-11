@@ -73,7 +73,7 @@ afterAll(async () => rm(root, { recursive: true, force: true }));
 describe("TypeScript monorepo and Next.js App Router", () => {
   it("selects the canonical workspace root without inventing nested repositories", () => {
     const output = JSON.parse(
-      run(["scan", "--root", root, "--list-roots"]),
+      run(["--json", "scan", "--root", root, "--list-roots"]),
     ) as { selectedRoot: string; nestedRoots: string[] };
     expect(output).toEqual(
       expect.objectContaining({ selectedRoot: ".", nestedRoots: [] }),
