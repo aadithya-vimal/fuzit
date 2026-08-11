@@ -97,6 +97,42 @@ export async function runCli(
     json: jsonRequested,
     quiet: arguments_.includes("--quiet"),
   });
+  const operation = [
+    "scan",
+    "pack",
+    "context",
+    "cache",
+    "snapshot",
+    "watch",
+    "graph",
+    "review",
+    "pr",
+    "issue",
+    "plugin",
+  ].find((name) => arguments_.includes(name));
+  const activityStarted =
+    operation !== undefined &&
+    !arguments_.includes("--help") &&
+    !arguments_.includes("-h");
+  const startedAt = performance.now();
+  if (activityStarted) {
+    const labels: Record<string, string> = {
+      scan: "Scanning repository",
+      pack: "Packing repository",
+      context: "Building task context",
+      cache: "Updating local index",
+      snapshot: "Processing snapshot",
+      watch: "Starting repository watch",
+      graph: "Building repository graph",
+      review: "Fetching and reviewing pull request",
+      pr: "Fetching and reviewing pull request",
+      issue: "Fetching issue context",
+      plugin: "Inspecting plugins",
+    };
+    output.writeActivity(
+      `Fuzit v${CLI_VERSION} · ${labels[operation!] ?? "Working"}...`,
+    );
+  }
 
   if (arguments_.includes("--quiet") && arguments_.includes("--debug")) {
     output.writeDiagnostic(
@@ -301,5 +337,10 @@ export async function runCli(
     return CLI_USAGE_ERROR_EXIT_CODE;
   }
 
+  if (activityStarted && commandExitCode === EXIT_CODES.success) {
+    output.writeActivity(
+      `Fuzit v${CLI_VERSION} · ${operation} complete (${((performance.now() - startedAt) / 1_000).toFixed(2)}s)`,
+    );
+  }
   return commandExitCode;
 }

@@ -24,6 +24,29 @@ async function scan(root: string, mode = "--items") {
 }
 
 describe("scan baseline", () => {
+  it("shows restrained progress in human mode and suppresses it for JSON", async () => {
+    const root = await mkdtemp(join(tmpdir(), "fuzit-progress-scan-"));
+    await writeFile(join(root, "app.ts"), "export {};");
+    let stdout = "";
+    let stderr = "";
+    const exitCode = await runCli(
+      ["scan", "--root", root],
+      {
+        writeOut: (value) => (stdout += value),
+        writeErr: (value) => (stderr += value),
+      },
+      { repositoryRoot: root, environment: {} },
+    );
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain('"status":"complete"');
+    expect(stderr).toContain("Fuzit v0.0.1 · Scanning repository...");
+    expect(stderr).toContain("scan complete");
+
+    const machine = await scan(root, "--summary");
+    expect(machine.stderr).toBe("");
+    expect(() => JSON.parse(machine.stdout)).not.toThrow();
+  });
+
   it("uses a useful summary for a bare scan", async () => {
     const root = await mkdtemp(join(tmpdir(), "fuzit-default-scan-"));
     await writeFile(join(root, "app.jsx"), "export const App = () => null;");

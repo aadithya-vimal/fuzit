@@ -34,6 +34,11 @@ function redactDiagnostic(diagnostic: Diagnostic): Diagnostic {
 
 export function createOutputRouter(io: OutputIo, options: OutputOptions) {
   return {
+    writeActivity(value: string): void {
+      if (options.json || options.quiet) return;
+      io.writeErr(`${redactSensitiveText(value)}\n`);
+    },
+
     writeData(value: unknown): void {
       if (options.json) {
         io.writeOut(`${JSON.stringify(value)}\n`);
