@@ -164,7 +164,7 @@ export function registerPrCommand(
       ) => {
         // ── pr pack <url> subcommand dispatch ─────────────────────────────
         if (sourceArg === "pack") {
-          const packSource = cmd.args[0];
+          const packSource = cmd.args[1] ?? cmd.args[0];
           try {
             if (!packSource) throw new Error("pr pack requires a PR URL or OWNER/REPO#NUMBER");
             let prUrl: string;

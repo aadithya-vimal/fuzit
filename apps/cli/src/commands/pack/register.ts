@@ -1,6 +1,7 @@
 import { open, rm, mkdtemp } from "node:fs/promises";
 import { extname, resolve, join } from "node:path";
 import { tmpdir } from "node:os";
+import { createHash } from "node:crypto";
 
 import { estimateBudget } from "@fuzit/budgeting";
 import {
@@ -157,6 +158,7 @@ async function acquirePrItems(
     const content = `# File: ${file.path}\n\n## Changes (+${file.additions}/-${file.deletions})\n\n\`\`\`diff\n${patchLines}\n\`\`\``;
     const sizeBytes = Buffer.byteLength(content, "utf8");
     const ext = file.path.includes(".") ? `.${file.path.split(".").pop() ?? ""}` : "";
+    const sha256 = createHash("sha256").update(content).digest("hex");
 
     const item = createFileContextItem(
       {
@@ -174,7 +176,7 @@ async function acquirePrItems(
       {
         status: "complete",
         content,
-        sha256: `sha256:pr-${prRef.number}-${file.path}`,
+        sha256,
       },
     );
     items.push(
@@ -381,7 +383,7 @@ export function registerPackCommand(
             {
               status: "complete",
               content: stdinText,
-              sha256: "sha256:stdin",
+              sha256: createHash("sha256").update(stdinText).digest("hex"),
             },
           );
           items = [registerSecurityFilteredItem({ ...item, findings: [] } as unknown as SecurityFilteredItem)];
