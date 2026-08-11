@@ -2,6 +2,9 @@
   "name": "@fuzit/cli",
   "version": "0.0.8",
   "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT",
   "files": [
     "bin/*.mjs",
