@@ -44,16 +44,40 @@ function components(
   task: string,
   item: SecurityFilteredItem,
 ): Record<string, number> {
-  const searchable = terms(`${item.path} ${item.content ?? ""}`);
-  const lexical = terms(task).reduce(
-    (score, term) =>
-      score + searchable.filter((value) => value === term).length,
-    0,
-  );
+  const taskTerms = [...new Set(terms(task))];
+  const contentTerms = terms(item.content ?? "");
+  const pathTerms = terms(item.path);
+  const lengthNormalization = Math.sqrt(Math.max(1, contentTerms.length / 100));
+  const lexical = taskTerms.reduce((score, term) => {
+    const contentFrequency = contentTerms.filter(
+      (value) => value === term,
+    ).length;
+    const pathFrequency = pathTerms.filter((value) => value === term).length;
+    return (
+      score +
+      Math.min(contentFrequency, 3) / lengthNormalization +
+      pathFrequency * 3
+    );
+  }, 0);
   const path = item.path.toLowerCase();
   const content = (item.content ?? "").toLowerCase();
+  const normalizedTask = task
+    .normalize("NFKC")
+    .replaceAll("\\", "/")
+    .toLowerCase();
+  const explicitlyMentioned =
+    normalizedTask.includes(path) ||
+    normalizedTask.includes(path.split("/").at(-1) ?? path);
+  const generatedArtifact =
+    item.lifecycle === "generated" ||
+    /(?:^|\/)(?:fuzit[-_.](?:pack|context|evidence)|final_audit_evidence)(?:[-_.]|$)/i.test(
+      path,
+    ) ||
+    /^(?:# Fuzit (?:context|pack)|\{\s*"kind"\s*:\s*"fuzit-)/i.test(content);
   return {
     lexical,
+    exact: explicitlyMentioned ? 25 : 0,
+    generated: generatedArtifact ? 1 : 0,
     git: 0,
     test: /(^|\/)(?:test|tests|__tests__)(\/|$)|\.(?:test|spec)\./.test(path)
       ? 1
@@ -98,7 +122,10 @@ export function createTaskContext(input: {
       const values = components(input.task, item);
       const score = Object.entries(values).reduce(
         (total, [source, value]) =>
-          total + value * (input.profile.weights[source] ?? 0),
+          total +
+          (source === "generated"
+            ? value * -1_000
+            : value * (input.profile.weights[source] ?? 0)),
         0,
       );
       return { item, values, score };
