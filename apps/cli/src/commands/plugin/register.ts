@@ -56,6 +56,7 @@ export async function findPluginManifestPaths(dir: string): Promise<string[]> {
 
 export async function discoverPlugins(
   rootDir: string,
+  onInvalid?: (manifestPath: string, error: unknown) => void,
 ): Promise<DiscoveredPluginInfo[]> {
   const manifestPaths = await findPluginManifestPaths(rootDir);
   const plugins: DiscoveredPluginInfo[] = [];
@@ -63,7 +64,7 @@ export async function discoverPlugins(
   for (const manifestPath of manifestPaths) {
     try {
       const content = await readFile(manifestPath, "utf8");
-      const rawJson = JSON.parse(content);
+      const rawJson = JSON.parse(content.replace(/^\uFEFF/, ""));
       const manifest = parsePluginManifest(rawJson);
       const compatibility = validatePluginCompatibility(manifest);
       plugins.push({
@@ -75,8 +76,8 @@ export async function discoverPlugins(
         compatibility,
         enabled: compatibility.compatible,
       });
-    } catch {
-      // Skip invalid manifests during discovery
+    } catch (error) {
+      onInvalid?.(manifestPath, error);
     }
   }
 
@@ -99,7 +100,23 @@ export function registerPluginCommand(
       const targetDir = resolve(
         options.dir ?? dependencies.workingDirectory ?? process.cwd(),
       );
-      const plugins = await discoverPlugins(targetDir);
+      let invalid = false;
+      const plugins = await discoverPlugins(
+        targetDir,
+        (manifestPath, error) => {
+          invalid = true;
+          dependencies.writeDiagnostic?.(
+            {
+              schemaVersion: 1,
+              code: "PLUGIN.INVALID_MANIFEST",
+              severity: "error",
+              source: "plugin",
+              message: `Plugin manifest '${manifestPath}' is invalid: ${error instanceof Error ? error.message : String(error)}`,
+            },
+            error,
+          );
+        },
+      );
 
       if (dependencies.json) {
         dependencies.writeData(
@@ -126,7 +143,9 @@ export function registerPluginCommand(
           dependencies.writeData(["Discovered plugins:", ...lines].join("\n"));
         }
       }
-      dependencies.setExitCode(EXIT_CODES.success);
+      dependencies.setExitCode(
+        invalid ? EXIT_CODES.validation : EXIT_CODES.success,
+      );
     });
 
   pluginCmd
@@ -180,7 +199,7 @@ export function registerPluginCommand(
 
       try {
         const content = await readFile(manifestPath, "utf8");
-        const rawJson = JSON.parse(content);
+        const rawJson = JSON.parse(content.replace(/^\uFEFF/, ""));
         const manifest = parsePluginManifest(rawJson);
         const compatibility = validatePluginCompatibility(manifest);
         const perms = manifest.permissions;
@@ -275,7 +294,7 @@ export function registerPluginCommand(
       );
       try {
         const content = await readFile(fullPath, "utf8");
-        const rawJson = JSON.parse(content);
+        const rawJson = JSON.parse(content.replace(/^\uFEFF/, ""));
         const manifest = parsePluginManifest(rawJson);
         const compatibility = validatePluginCompatibility(manifest);
 

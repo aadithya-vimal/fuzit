@@ -275,7 +275,9 @@ export class PluginHost {
       : join(resolvedDir, "fuzit-plugin.json");
 
     const manifestContent = await readFile(manifestPath, "utf-8");
-    const manifest = parsePluginManifest(JSON.parse(manifestContent));
+    const manifest = parsePluginManifest(
+      JSON.parse(manifestContent.replace(/^\uFEFF/, "")),
+    );
 
     const compatResult = validatePluginCompatibility(manifest);
     if (!compatResult.compatible) {

@@ -96,6 +96,33 @@ describe("Plugin CLI Commands (V1-107)", () => {
     expect(getOut()).toContain("Capabilities: parser");
   });
 
+  it("accepts a UTF-8 BOM in plugin manifests", async () => {
+    const manifestPath = join(pluginDir, "fuzit-plugin.json");
+    const original = await (
+      await import("node:fs/promises")
+    ).readFile(manifestPath, "utf8");
+    await writeFile(manifestPath, `\uFEFF${original}`, "utf8");
+    const { io, getOut } = createBufferIo();
+    const exitCode = await runCli(["plugin", "inspect", manifestPath], io, {
+      repositoryRoot: tempDir,
+    });
+    expect(exitCode).toBe(EXIT_CODES.success);
+    expect(getOut()).toContain("Plugin: Sample AST Plugin");
+  });
+
+  it("surfaces malformed discovered manifests", async () => {
+    const brokenDir = join(tempDir, "broken-plugin");
+    await (await import("node:fs/promises")).mkdir(brokenDir);
+    await writeFile(join(brokenDir, "fuzit-plugin.json"), "{broken", "utf8");
+    const { io, getErr } = createBufferIo();
+    const exitCode = await runCli(["plugin", "list", "--dir", tempDir], io, {
+      repositoryRoot: tempDir,
+    });
+    expect(exitCode).toBe(EXIT_CODES.validation);
+    expect(getErr()).toContain("PLUGIN.INVALID_MANIFEST");
+    expect(getErr()).toContain("broken-plugin");
+  });
+
   it("validates a valid plugin manifest", async () => {
     const { io, getOut } = createBufferIo();
     const manifestPath = join(pluginDir, "fuzit-plugin.json");

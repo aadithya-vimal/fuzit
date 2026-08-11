@@ -120,7 +120,7 @@ async function readRepositoryConfig(
 
   let parsed: unknown;
   try {
-    parsed = JSON.parse(contents);
+    parsed = JSON.parse(contents.replace(/^\uFEFF/, ""));
   } catch {
     throw new ConfigLoadError(
       "CONFIG.INVALID",

@@ -66,10 +66,12 @@ export async function readSnapshot(
 ): Promise<SnapshotManifest> {
   return snapshotManifestSchema.parse(
     JSON.parse(
-      await readFile(
-        join(directory, `${id.slice("snapshot:".length)}.json`),
-        "utf8",
-      ),
+      (
+        await readFile(
+          join(directory, `${id.slice("snapshot:".length)}.json`),
+          "utf8",
+        )
+      ).replace(/^\uFEFF/, ""),
     ),
   );
 }
