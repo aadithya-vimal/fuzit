@@ -178,7 +178,7 @@ export function registerScanCommand(
           return;
         }
 
-        if (options.summary) {
+        if (options.summary || !options.listRoots) {
           const counts = { files: 0, directories: 0, symlinks: 0 };
           for await (const entry of traverseDirectory(root, {
             cliRules,
@@ -195,18 +195,6 @@ export function registerScanCommand(
             status: "complete",
           });
           dependencies.setExitCode(EXIT_CODES.success);
-          return;
-        }
-
-        if (!options.listRoots) {
-          dependencies.writeDiagnostic({
-            schemaVersion: 1,
-            code: "SCAN.MODE_REQUIRED",
-            severity: "error",
-            source: "scan",
-            message: "This baseline requires --list-roots.",
-          });
-          dependencies.setExitCode(EXIT_CODES.validation);
           return;
         }
 

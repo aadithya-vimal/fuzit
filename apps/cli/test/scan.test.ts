@@ -24,6 +24,18 @@ async function scan(root: string, mode = "--items") {
 }
 
 describe("scan baseline", () => {
+  it("uses a useful summary for a bare scan", async () => {
+    const root = await mkdtemp(join(tmpdir(), "fuzit-default-scan-"));
+    await writeFile(join(root, "app.jsx"), "export const App = () => null;");
+    const result = await scan(root, "");
+
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      status: "complete",
+      counts: { files: 1 },
+    });
+  });
+
   it("handles an empty repository", async () => {
     const root = await mkdtemp(join(tmpdir(), "fuzit-empty-"));
     expect(await scan(root, "--summary")).toMatchObject({

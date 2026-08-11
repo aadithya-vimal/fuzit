@@ -22,6 +22,23 @@ afterEach(async () => {
 });
 
 describe("file classification", () => {
+  it.each([
+    ["component.jsx", "JavaScript"],
+    ["styles.css", "CSS"],
+    ["config.yaml", "YAML"],
+    ["main.rs", "Rust"],
+  ])("classifies mainstream file %s", async (name, language) => {
+    const file = await fixture(name, "content");
+    const result = await classifyFile(file.absolute, file.path);
+    expect(result.language.name).toBe(language);
+  });
+
+  it("does not classify .gitignore as generated from its patterns", async () => {
+    const file = await fixture(".gitignore", "generated/\n");
+    const result = await classifyFile(file.absolute, file.path);
+    expect(result.generated).toBe(false);
+  });
+
   it("classifies extensionless files conservatively", async () => {
     const file = await fixture("LICENSE", "text");
     await expect(classifyFile(file.absolute, file.path)).resolves.toMatchObject(

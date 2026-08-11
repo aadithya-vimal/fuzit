@@ -10,11 +10,33 @@ const languages: Readonly<Record<string, string>> = {
   ".ts": "TypeScript",
   ".tsx": "TypeScript",
   ".js": "JavaScript",
+  ".jsx": "JavaScript",
+  ".mjs": "JavaScript",
+  ".cjs": "JavaScript",
   ".json": "JSON",
   ".md": "Markdown",
+  ".mdx": "Markdown",
   ".py": "Python",
   ".go": "Go",
   ".java": "Java",
+  ".css": "CSS",
+  ".scss": "SCSS",
+  ".sass": "Sass",
+  ".html": "HTML",
+  ".xml": "XML",
+  ".yaml": "YAML",
+  ".yml": "YAML",
+  ".toml": "TOML",
+  ".rs": "Rust",
+  ".rb": "Ruby",
+  ".php": "PHP",
+  ".cs": "C#",
+  ".cpp": "C++",
+  ".c": "C",
+  ".h": "C/C++ Header",
+  ".sh": "Shell",
+  ".ps1": "PowerShell",
+  ".sql": "SQL",
 };
 
 export interface ClassifyFileOptions {
@@ -75,7 +97,9 @@ export async function classifyFile(
     },
     sizeBytes: metadata.size,
     symlink,
-    generated: /generated|do not edit/i.test(prefixText),
+    generated:
+      !path.endsWith(".gitignore") &&
+      /(?:^|\W)generated(?:\W|$)|do not edit/i.test(prefixText),
     vendored: path
       .split("/")
       .some((segment) =>
