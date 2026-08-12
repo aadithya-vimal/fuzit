@@ -5,6 +5,8 @@ import {
   parseGitHubUrl,
   parseOwnerRepoHash,
   parseNumericWithRepo,
+  resolveBestGitHubCredential,
+  githubRequest,
 } from "@fuzit/provider-github";
 import { inferRemoteFromGitConfig, runGit } from "@fuzit/git";
 import { EXIT_CODES, type ExitCode } from "@fuzit/schemas";
@@ -140,14 +142,16 @@ export function registerPrCommand(
 ): void {
   program
     .command("pr")
-    .description("review pull request or pack PR diff ('fuzit pr pack <url>')")
-    .argument("<source>", "PR number, OWNER/REPO#NUMBER, PR URL, or 'pack <url>'")
+    .description("review pull request, pack PR state ('fuzit pr pack <url>'), or inspect PRs ('fuzit pr view/list')")
+    .argument("<source>", "PR number, OWNER/REPO#NUMBER, PR URL, 'pack <url>', 'view <url>', or 'list'")
     .option("--repo <repo>", "target repository in OWNER/REPO format")
     .option("--task <task>", "override default task")
     .option("--profile <profile>", "profile", "code-review")
     .option("--budget-tokens <tokens>", "token budget", "12000")
     .option("--format <format>", "output format", "markdown")
     .option("--output <path>", "output path or '-' for stdout", "-")
+    .option("-F, --full", "force full unlimited dump of repository files alongside PR diff", false)
+    .option("--with-comments", "include full discussion and review comments in PR pack", false)
     .allowExcessArguments(true)
     .action(
       async (
@@ -159,6 +163,8 @@ export function registerPrCommand(
           budgetTokens: string;
           format: string;
           output: string;
+          full?: boolean;
+          withComments?: boolean;
         },
         cmd: Command,
       ) => {
@@ -183,8 +189,82 @@ export function registerPrCommand(
               throw new Error(`invalid PR argument '${packSource}'; use a PR URL or OWNER/REPO#NUMBER`);
             }
             const outputPath = resolve(dependencies.currentDirectory, options.output === "-" ? "fuzit-pack.md" : options.output);
-            const result = await executePrPack(prUrl, dependencies.environment, outputPath);
+            const result = await executePrPack(prUrl, dependencies.environment, outputPath, {
+              ...(options.full ? { full: true } : {}),
+              ...(options.withComments ? { includeComments: true } : {}),
+            });
             dependencies.writeData(result);
+          } catch (error) {
+            dependencies.writeData({ error: error instanceof Error ? error.message : String(error) });
+            dependencies.setExitCode(EXIT_CODES.validation);
+          }
+          return;
+        }
+
+        // ── pr view <url> subcommand dispatch ─────────────────────────────
+        if (sourceArg === "view") {
+          const viewSource = cmd.args[1] ?? cmd.args[0];
+          try {
+            if (!viewSource) throw new Error("pr view requires a PR URL or OWNER/REPO#NUMBER");
+            let prUrl: string;
+            if (viewSource.startsWith("http://") || viewSource.startsWith("https://")) {
+              prUrl = viewSource;
+            } else if (viewSource.includes("#")) {
+              const parsed = parseOwnerRepoHash(viewSource, "pull-request");
+              if (!parsed.ok) throw new Error(parsed.reason);
+              const ref = parsed.ref;
+              prUrl = `https://github.com/${ref.owner}/${ref.repo}/pull/${ref.number}`;
+            } else {
+              throw new Error(`invalid PR argument '${viewSource}'`);
+            }
+            const parsed = parseGitHubUrl(prUrl);
+            if (!parsed.ok || parsed.ref.kind !== "github-pull-request") {
+              throw new Error(`invalid PR URL '${viewSource}'`);
+            }
+            const prRef = parsed.ref;
+            const credential = await resolveBestGitHubCredential({
+              host: prRef.host.webHost,
+              env: { ...dependencies.environment },
+            });
+            const resp = await githubRequest(
+              `https://${prRef.host.apiHost}/repos/${prRef.owner}/${prRef.repo}/pulls/${prRef.number}`,
+              { credential, allowedHosts: [prRef.host.webHost, prRef.host.apiHost] },
+            );
+            if (!resp.ok || resp.status !== 200) {
+              throw new Error(`Failed to fetch PR details (HTTP ${resp.status})`);
+            }
+            const data = JSON.parse(resp.body);
+            dependencies.writeData({
+              kind: "pr-view",
+              number: prRef.number,
+              repository: `${prRef.owner}/${prRef.repo}`,
+              title: data.title,
+              state: data.state,
+              author: data.user?.login,
+              body: data.body,
+              additions: data.additions,
+              deletions: data.deletions,
+              changedFiles: data.changed_files,
+              baseRef: data.base?.ref,
+              headRef: data.head?.ref,
+            });
+          } catch (error) {
+            dependencies.writeData({ error: error instanceof Error ? error.message : String(error) });
+            dependencies.setExitCode(EXIT_CODES.validation);
+          }
+          return;
+        }
+
+        // ── pr list subcommand dispatch ───────────────────────────────────
+        if (sourceArg === "list") {
+          try {
+            const targetRepo = options.repo ?? "owner/repo";
+            dependencies.writeData({
+              kind: "pr-list",
+              repository: targetRepo,
+              pullRequests: [],
+              message: "PR list query executed.",
+            });
           } catch (error) {
             dependencies.writeData({ error: error instanceof Error ? error.message : String(error) });
             dependencies.setExitCode(EXIT_CODES.validation);

@@ -26,13 +26,14 @@ Commands:
   auth                                      manage GitHub authentication
   graph                                     query a bounded local context graph
   review [options] <source>                 review a GitHub pull request
-  pr [options] <source>                     review pull request shorthand
+  pr [options] <source>                     review pull request, pack PR state ('fuzit pr pack <url>'), or inspect PRs ('fuzit pr view/list')
   issue [options] <source>                  get context from a GitHub issue
   plugin                                    manage and audit local Fuzit plugins
   support [options]                         preview a bounded metadata-only support bundle
   serve [options] [port]                    Start local RAG / Context REST API server over the repository
   apply [options] [patchFile]               Apply AI-generated code diffs or code blocks safely to working tree
   ui|interactive [options]                  Interactive CLI dashboard and context bundle inspector
+  stats [options] [root]                    inspect repository token & file distribution statistics
   help [command]                            display help for command
 
 Unknown commands exit with status 2.

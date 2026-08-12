@@ -68,7 +68,7 @@ function projectRules(config: EffectiveConfig): ExplicitPathRule[] {
 export async function acquireRepository(
   repositoryRoot: string,
   environment: Readonly<Record<string, string | undefined>> = {},
-  overrides?: { maxFiles?: number },
+  overrides?: { maxFiles?: number; maximumBytes?: number; full?: boolean },
 ): Promise<RepositoryAcquisition> {
   const root = resolve(repositoryRoot);
   const config = await loadEffectiveConfig({
@@ -76,6 +76,9 @@ export async function acquireRepository(
     environment,
     cli: overrides?.maxFiles !== undefined ? { maxFiles: overrides.maxFiles } : {},
   });
+  const targetMaxBytes = overrides?.full
+    ? Number.MAX_SAFE_INTEGER
+    : overrides?.maximumBytes;
   const items: SecurityFilteredItem[] = [];
   const omissions: { path: string; reason: string; failure: boolean }[] = [];
   try {
@@ -110,7 +113,10 @@ export async function acquireRepository(
       const result = await securityFilter({
         path: entry.path,
         readContent: async () => {
-          acquired = await readTextContent(absolutePath);
+          acquired = await readTextContent(
+            absolutePath,
+            targetMaxBytes !== undefined ? { maximumBytes: targetMaxBytes } : {},
+          );
           if (acquired.content === null) throw new Error("content unavailable");
           return acquired.content;
         },

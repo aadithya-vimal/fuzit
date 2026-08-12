@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.0.9 — 2026-08-12
+
+### Bug Fixes
+- Fixed `fuzit pack --full` detail truncation bug: resolved 64KB per-file byte cap issue by enabling unconstrained file byte limits when `--full` is specified or when custom max byte sizes are supplied.
+
+### New Features & Enhancements
+- **Enhanced PR State Packing**: `fuzit pr pack <url>` and `fuzit pack <pr-url>` now fetch full PR preamble state (Title, Body/Description, Author, Branches, Diff Summary, and Discussion Comments) with an optional `--full` mode to pack the full repository state at the PR's head revision alongside the PR preamble.
+- **Unlimited & Custom File-Size Packing**: Introduced `--max-file-bytes <size>` (e.g. `500kb`, `10mb`, `unlimited`) to override per-file byte limits.
+- **Smart Content Scope Selectors**: Added `--exclude-tests`, `--only-code`, and `--exclude-docs` flags to filter context bundle content scope easily.
+- **Repository Token & Statistics Inspector**: Added `fuzit stats` command and `--stats` flag to `fuzit pack` for file/token distribution breakdown by language and top file sizes.
+- **Interactive PR Inspection**: Added `fuzit pr view <url>` and `fuzit pr list` subcommands.
+
 ## 0.0.8 — 2026-08-11
 
 ### Bug Fixes

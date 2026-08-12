@@ -27,6 +27,7 @@ import { registerSupportCommand } from "./commands/support/register.js";
 import { registerServeCommand } from "./commands/serve/register.js";
 import { registerApplyCommand } from "./commands/apply/register.js";
 import { registerUiCommand } from "./commands/ui/register.js";
+import { registerStatsCommand } from "./commands/stats/register.js";
 import { routeSourceInput } from "@fuzit/core";
 import { createOutputRouter, type OutputIo } from "./output/router.js";
 
@@ -113,6 +114,7 @@ export async function runCli(
     "pr",
     "issue",
     "plugin",
+    "stats",
   ].find((name) => arguments_.includes(name));
   const activityStarted =
     operation !== undefined &&
@@ -133,6 +135,7 @@ export async function runCli(
       pr: "Fetching and reviewing pull request",
       issue: "Fetching issue context",
       plugin: "Inspecting plugins",
+      stats: "Calculating repository statistics",
     };
     if (operation === "graph") {
       const graphIndex = arguments_.indexOf("graph");
@@ -323,6 +326,14 @@ export async function runCli(
     },
   });
   registerUiCommand(program, {
+    currentDirectory: runtime.repositoryRoot ?? process.cwd(),
+    environment: runtime.environment ?? process.env,
+    writeData: output.writeData,
+    setExitCode: (code) => {
+      commandExitCode = code;
+    },
+  });
+  registerStatsCommand(program, {
     currentDirectory: runtime.repositoryRoot ?? process.cwd(),
     environment: runtime.environment ?? process.env,
     writeData: output.writeData,

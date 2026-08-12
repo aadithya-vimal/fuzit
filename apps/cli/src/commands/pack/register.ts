@@ -102,14 +102,51 @@ export function resolvePackRenderer(
   return renderer;
 }
 
+export function computeStats(items: readonly SecurityFilteredItem[]) {
+  let totalBytes = 0;
+  const langMap: Record<string, { files: number; bytes: number }> = {};
+  const statusCounts: Record<string, number> = { complete: 0, truncated: 0, omitted: 0, changed: 0 };
+
+  for (const item of items) {
+    const bytes = item.content ? Buffer.byteLength(item.content, "utf8") : 0;
+    totalBytes += bytes;
+    const lang = inferLanguage(item.path);
+    if (!langMap[lang]) langMap[lang] = { files: 0, bytes: 0 };
+    langMap[lang].files += 1;
+    langMap[lang].bytes += bytes;
+    statusCounts[item.contentStatus] = (statusCounts[item.contentStatus] ?? 0) + 1;
+  }
+
+  const estimatedTokens = Math.ceil(totalBytes / 4);
+  const sortedFiles = [...items].sort((a, b) => {
+    const aLen = a.content ? Buffer.byteLength(a.content, "utf8") : 0;
+    const bLen = b.content ? Buffer.byteLength(b.content, "utf8") : 0;
+    return bLen - aLen;
+  });
+  const topFiles = sortedFiles.slice(0, 10).map((f) => ({
+    path: f.path,
+    sizeBytes: f.content ? Buffer.byteLength(f.content, "utf8") : 0,
+    language: inferLanguage(f.path),
+  }));
+
+  return {
+    totalFiles: items.length,
+    totalBytes,
+    estimatedTokens,
+    statusCounts,
+    languages: langMap,
+    topFiles,
+  };
+}
+
 /**
- * Fetch PR changed files from GitHub API and produce SecurityFilteredItems
- * from the diff patches.
+ * Fetch PR changed files & rich PR introduction/comments from GitHub API.
  */
-async function acquirePrItems(
+export async function acquirePrItems(
   prUrl: string,
   environment: Readonly<Record<string, string | undefined>>,
-): Promise<{ items: SecurityFilteredItem[]; prNumber: number; repo: string }> {
+  options: { full?: boolean; includeComments?: boolean; maxFiles?: number; maximumBytes?: number } = {},
+): Promise<{ items: SecurityFilteredItem[]; prNumber: number; repo: string; preamble: string }> {
   const parsed = parseGitHubUrl(prUrl);
   if (!parsed.ok || parsed.ref.kind !== "github-pull-request") {
     throw new Error(`Not a valid PR URL: ${prUrl}`);
@@ -125,6 +162,71 @@ async function acquirePrItems(
     allowedHosts: [prRef.host.webHost, prRef.host.apiHost],
   };
 
+  // Fetch PR detail metadata
+  let prMeta: { title?: string; body?: string; state?: string; author?: string; baseRef?: string; headRef?: string; headSha?: string; additions?: number; deletions?: number; changedFiles?: number } = {};
+  try {
+    const detailResp = await githubRequest(
+      `${apiRoot}/repos/${encodeURIComponent(prRef.owner)}/${encodeURIComponent(prRef.repo)}/pulls/${prRef.number}`,
+      requestOptions,
+    );
+    if (detailResp.ok && detailResp.status === 200) {
+      const data = JSON.parse(detailResp.body);
+      prMeta = {
+        title: data.title ?? "",
+        body: data.body ?? "",
+        state: data.merged ? "merged" : data.state ?? "open",
+        author: data.user?.login ?? "ghost",
+        baseRef: data.base?.ref ?? "main",
+        headRef: data.head?.ref ?? "",
+        headSha: data.head?.sha ?? "",
+        additions: data.additions ?? 0,
+        deletions: data.deletions ?? 0,
+        changedFiles: data.changed_files ?? 0,
+      };
+    }
+  } catch {
+    /* fallback to defaults */
+  }
+
+  // Fetch PR discussion comments if available
+  let commentsSummary = "";
+  try {
+    const commentsResp = await githubRequest(
+      `${apiRoot}/repos/${encodeURIComponent(prRef.owner)}/${encodeURIComponent(prRef.repo)}/issues/${prRef.number}/comments?per_page=30`,
+      requestOptions,
+    );
+    if (commentsResp.ok && commentsResp.status === 200) {
+      const commentsData = JSON.parse(commentsResp.body);
+      if (Array.isArray(commentsData) && commentsData.length > 0) {
+        commentsSummary = commentsData
+          .map((c: { user?: { login?: string }; body?: string }) => `### Comment by @${c.user?.login ?? "user"}\n${c.body ?? ""}`)
+          .join("\n\n");
+      }
+    }
+  } catch {
+    /* optional */
+  }
+
+  const preambleLines = [
+    `# Pull Request #${prRef.number}: ${prMeta.title ?? "PR Context"}`,
+    `- **Repository**: ${prRef.owner}/${prRef.repo}`,
+    `- **Author**: @${prMeta.author ?? "unknown"}`,
+    `- **State**: ${prMeta.state ?? "open"} (${prMeta.baseRef ?? "main"} <- ${prMeta.headRef ?? "branch"})`,
+    `- **Head Commit**: \`${prMeta.headSha ?? "latest"}\``,
+    `- **Diff Summary**: +${prMeta.additions ?? 0} / -${prMeta.deletions ?? 0} (${prMeta.changedFiles ?? 0} changed files)`,
+    "",
+    "## PR Description & Introduction",
+    prMeta.body || "_No description provided._",
+    "",
+  ];
+
+  if (commentsSummary) {
+    preambleLines.push("## PR Discussion & Review Comments", commentsSummary, "");
+  }
+
+  const preamble = preambleLines.join("\n");
+
+  // Fetch changed files list
   const filesResp = await githubRequest(
     `${apiRoot}/repos/${encodeURIComponent(prRef.owner)}/${encodeURIComponent(prRef.repo)}/pulls/${prRef.number}/files?per_page=100`,
     requestOptions,
@@ -146,7 +248,7 @@ async function acquirePrItems(
     throw new Error("GitHub returned invalid PR file list.");
   }
 
-  const items: SecurityFilteredItem[] = [];
+  let items: SecurityFilteredItem[] = [];
   for (const rawFile of rawFiles) {
     const normalized = normalizePrFile(prRef, rawFile);
     const file = normalized.fileRecord;
@@ -187,7 +289,25 @@ async function acquirePrItems(
     );
   }
 
-  return { items, prNumber: prRef.number, repo: `${prRef.owner}/${prRef.repo}` };
+  // If full packing requested for PR, clone/acquire full repository state at head branch
+  if (options.full) {
+    try {
+      const repoUrl = `https://${prRef.host.webHost}/${prRef.owner}/${prRef.repo}`;
+      const remoteRepo = await acquireRemoteRepoItems(repoUrl, environment, {
+        full: true,
+        ...(options.maxFiles !== undefined ? { maxFiles: options.maxFiles } : {}),
+        ...(options.maximumBytes !== undefined ? { maximumBytes: options.maximumBytes } : {}),
+        ...(prMeta.headRef ? { revision: prMeta.headRef } : {}),
+      });
+      const prFilePaths = new Set(items.map((i) => i.path));
+      const nonPrRepoItems = remoteRepo.items.filter((item) => !prFilePaths.has(item.path));
+      items = [...items, ...nonPrRepoItems];
+    } catch {
+      /* fallback to changed items only if clone fails */
+    }
+  }
+
+  return { items, prNumber: prRef.number, repo: `${prRef.owner}/${prRef.repo}`, preamble };
 }
 
 function inferLanguage(filePath: string): string {
@@ -209,7 +329,7 @@ function inferLanguage(filePath: string): string {
 async function acquireRemoteRepoItems(
   repoUrl: string,
   environment: Readonly<Record<string, string | undefined>>,
-  overrides?: { maxFiles?: number },
+  overrides?: { maxFiles?: number; maximumBytes?: number; full?: boolean; revision?: string },
 ): Promise<ReturnType<typeof acquireRepository>> {
   const parsed = parseGitHubUrl(repoUrl);
   if (!parsed.ok || parsed.ref.kind !== "github-repository") {
@@ -231,11 +351,12 @@ async function acquireRemoteRepoItems(
     }
   }
 
+  const revision = overrides?.revision ?? repoRef.revision;
   const tempDir = await mkdtemp(join(tmpdir(), "fuzit-remote-"));
   try {
     const cloneArgs = [
       "clone", "--depth", "1", "--single-branch", "--no-tags",
-      ...(repoRef.revision ? ["--branch", repoRef.revision] : []),
+      ...(revision ? ["--branch", revision] : []),
       cloneUrl, tempDir,
     ];
     const cloneResult = await runSafeRemoteGit(cloneArgs, {
@@ -248,7 +369,12 @@ async function acquireRemoteRepoItems(
         `Failed to clone remote repository: ${cloneResult.stderr || "unknown git error"}`,
       );
     }
-    return await acquireRepository(tempDir, environment, overrides);
+    const repoOverrides = {
+      ...(overrides?.maxFiles !== undefined ? { maxFiles: overrides.maxFiles } : {}),
+      ...(overrides?.maximumBytes !== undefined ? { maximumBytes: overrides.maximumBytes } : {}),
+      ...(overrides?.full ? { full: true } : {}),
+    };
+    return await acquireRepository(tempDir, environment, repoOverrides);
   } finally {
     try { await rm(tempDir, { recursive: true, force: true }); } catch { /* best-effort */ }
   }
@@ -283,6 +409,11 @@ export function registerPackCommand(
     .option("--instruction <text>", "prepend system prompt or instructions to context bundle")
     .option("--config <path>", "custom configuration file path")
     .option("--max-files <count>", "override maximum file count limit", (val) => Number(val))
+    .option("--max-file-bytes <size>", "override maximum per-file byte limit (e.g. 500kb, 10mb)")
+    .option("--exclude-tests", "exclude test files and directories", false)
+    .option("--only-code", "pack only source code files, excluding lockfiles and documentation", false)
+    .option("--exclude-docs", "exclude documentation files and directories", false)
+    .option("--stats", "output repository token & file distribution statistics report", false)
     .option("--git <mode>", "include current, history, or diff Git context")
     .option("--since <snapshot>", "include changes since an immutable snapshot")
     .option("-F, --full", "force full unlimited dump of all repository files", false)
@@ -312,6 +443,11 @@ export function registerPackCommand(
           instruction?: string;
           config?: string;
           maxFiles?: number;
+          maxFileBytes?: string;
+          excludeTests?: boolean;
+          onlyCode?: boolean;
+          excludeDocs?: boolean;
+          stats?: boolean;
           git?: string;
           since?: string;
           full?: boolean;
@@ -362,7 +498,22 @@ export function registerPackCommand(
         let items: SecurityFilteredItem[] = [];
         let failedSources: string[] = [];
         let prPackMeta: { prNumber: number; repo: string } | undefined;
+        let prPreamble: string | undefined;
+
         const effectiveMaxFiles = options.full ? 999999 : options.maxFiles;
+        const parsedMaxFileBytes = options.full
+          ? Number.MAX_SAFE_INTEGER
+          : options.maxFileBytes
+            ? options.maxFileBytes.toLowerCase() === "unlimited"
+              ? Number.MAX_SAFE_INTEGER
+              : parseByteSize(options.maxFileBytes)
+            : undefined;
+
+        const repoOverrides = {
+          ...(effectiveMaxFiles !== undefined ? { maxFiles: effectiveMaxFiles } : {}),
+          ...(parsedMaxFileBytes !== undefined ? { maximumBytes: parsedMaxFileBytes } : {}),
+          ...(options.full ? { full: true } : {}),
+        };
 
         if (isStdin) {
           // ── stdin mode ──────────────────────────────────────────────────
@@ -391,33 +542,13 @@ export function registerPackCommand(
           // ── remote source mode ───────────────────────────────────────────
           const parsedRemote = parseGitHubUrl(remoteSource);
 
-          if (parsedRemote.ok && parsedRemote.ref.kind === "github-pull-request") {
-            // PR URL → pack the PR diff files
-            try {
-              const prResult = await acquirePrItems(remoteSource, dependencies.environment);
-              items = prResult.items;
-              prPackMeta = { prNumber: prResult.prNumber, repo: prResult.repo };
-            } catch (error) {
-              dependencies.writeDiagnostic(
-                {
-                  schemaVersion: 1,
-                  code: "PACK.REMOTE_FETCH_FAILED",
-                  severity: "error",
-                  source: "pack",
-                  message: `Failed to fetch PR from GitHub: ${error instanceof Error ? error.message : String(error)}`,
-                },
-                error,
-              );
-              dependencies.setExitCode(EXIT_CODES.environment);
-              return;
-            }
-          } else if (parsedRemote.ok && parsedRemote.ref.kind === "github-repository") {
+          if (parsedRemote.ok && parsedRemote.ref.kind !== "github-pull-request") {
             // Repo URL → shallow clone and pack
             try {
               const remoteAcquisition = await acquireRemoteRepoItems(
                 remoteSource,
                 dependencies.environment,
-                effectiveMaxFiles !== undefined ? { maxFiles: effectiveMaxFiles } : undefined,
+                repoOverrides,
               );
               items = [...remoteAcquisition.items];
               failedSources = remoteAcquisition.omissions
@@ -431,6 +562,31 @@ export function registerPackCommand(
                   severity: "error",
                   source: "pack",
                   message: `Failed to clone remote repository: ${error instanceof Error ? error.message : String(error)}`,
+                },
+                error,
+              );
+              dependencies.setExitCode(EXIT_CODES.environment);
+              return;
+            }
+          } else if (parsedRemote.ok && parsedRemote.ref.kind === "github-pull-request") {
+            // PR URL → pack the PR diff files + PR introduction (and full repo if --full)
+            try {
+              const prResult = await acquirePrItems(
+                remoteSource,
+                dependencies.environment,
+                repoOverrides,
+              );
+              items = prResult.items;
+              prPackMeta = { prNumber: prResult.prNumber, repo: prResult.repo };
+              prPreamble = prResult.preamble;
+            } catch (error) {
+              dependencies.writeDiagnostic(
+                {
+                  schemaVersion: 1,
+                  code: "PACK.REMOTE_FETCH_FAILED",
+                  severity: "error",
+                  source: "pack",
+                  message: `Failed to fetch PR from GitHub: ${error instanceof Error ? error.message : String(error)}`,
                 },
                 error,
               );
@@ -453,12 +609,34 @@ export function registerPackCommand(
           const acquisition = await acquireRepository(
             root,
             dependencies.environment,
-            { ...(effectiveMaxFiles !== undefined ? { maxFiles: effectiveMaxFiles } : {}) },
+            repoOverrides,
           );
           items = [...acquisition.items];
           failedSources = acquisition.omissions
             .filter(({ failure }) => failure)
             .map(({ path, reason }) => `${path}: ${reason}`);
+        }
+
+        // Apply content scope selectors (--exclude-tests, --only-code, --exclude-docs)
+        if (options.excludeTests) {
+          items = items.filter(
+            (item) => !/(^|\/)(?:test|tests|__tests__|spec|specs)(\/|$)|[._](?:test|spec)\.[a-z0-9]+$/i.test(item.path),
+          );
+        }
+        if (options.onlyCode) {
+          const codeExts = new Set([
+            ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".go", ".java",
+            ".rs", ".c", ".cpp", ".h", ".hpp", ".cs", ".rb", ".php", ".swift", ".kt",
+          ]);
+          items = items.filter((item) => {
+            const ext = item.path.includes(".") ? "." + item.path.split(".").pop()!.toLowerCase() : "";
+            return codeExts.has(ext);
+          });
+        }
+        if (options.excludeDocs) {
+          items = items.filter(
+            (item) => !/(^|\/)(?:docs|documentation)(\/|$)|[._]mdx?$/i.test(item.path),
+          );
         }
 
         // Apply --diff or --staged filter (only meaningful for local repos)
@@ -523,9 +701,22 @@ export function registerPackCommand(
           });
         }
 
+        // Output statistics report if requested
+        if (options.stats) {
+          const statsReport = computeStats(items);
+          dependencies.writeData({
+            kind: "pack-stats",
+            stats: statsReport,
+          });
+          if (options.dryRun) {
+            dependencies.setExitCode(EXIT_CODES.success);
+            return;
+          }
+        }
+
         // For local mode, run full repo analysis; for remote use minimal stub
         const intelligence = (!remoteSource && !isStdin)
-          ? analyzeRepository(await acquireRepository(root, dependencies.environment, { ...(effectiveMaxFiles !== undefined ? { maxFiles: effectiveMaxFiles } : {}) }))
+          ? analyzeRepository(await acquireRepository(root, dependencies.environment, repoOverrides))
           : { languages: [], packages: [], frameworks: [], tests: [], entryPoints: [], dependencies: [], conflicts: [], partial: false };
 
         const gitIdentity = (!remoteSource && !isStdin)
@@ -576,6 +767,10 @@ export function registerPackCommand(
                   options.git === "diff" ? await collectGitDiff(root) : null,
               };
 
+        const effectiveInstruction = [prPreamble, options.instruction]
+          .filter(Boolean)
+          .join("\n\n---\n\n");
+
         const bundle = createContextBundle({
           schemaVersion: 1,
           source: prPackMeta
@@ -619,7 +814,7 @@ export function registerPackCommand(
           },
           intelligence,
           ...(gitContext === undefined ? {} : { git: gitContext }),
-          ...(options.instruction ? { instruction: options.instruction } : {}),
+          ...(effectiveInstruction ? { instruction: effectiveInstruction } : {}),
         });
 
         if (options.dryRun) {
@@ -684,7 +879,7 @@ export function registerPackCommand(
                 code: "PACK.OUTPUT_WRITE_FAILED",
                 severity: "error",
                 source: "pack",
-                message: "Output could not be created without overwriting.",
+                message: "Output file could not be written.",
               },
               error,
             );
@@ -719,6 +914,7 @@ export async function executeDualPack(
     removeEmptyLines?: boolean;
     lineNumbers?: boolean;
     instruction?: string;
+    full?: boolean;
   } = {},
 ): Promise<{
   kind: "dual-pack";
@@ -726,7 +922,11 @@ export async function executeDualPack(
   files: number;
   tokens: number;
 }> {
-  const acquisition = await acquireRepository(root, environment);
+  const acquisition = await acquireRepository(
+    root,
+    environment,
+    options.full ? { full: true } : {},
+  );
   let items = [...acquisition.items];
   const transformOptions = {
     ...(options.compress ? { compress: true } : {}),
@@ -815,12 +1015,13 @@ export async function executeDualPack(
 }
 
 /**
- * Pack a PR's changed files — standalone function used by `fuzit pr pack`.
+ * Pack a PR's changed files & introduction — standalone function used by `fuzit pr pack`.
  */
 export async function executePrPack(
   prUrl: string,
   environment: Readonly<Record<string, string | undefined>>,
   outputPath: string,
+  options: { full?: boolean; includeComments?: boolean } = {},
 ): Promise<{
   kind: "pr-pack";
   output: string;
@@ -828,9 +1029,14 @@ export async function executePrPack(
   repo: string;
   files: number;
   tokens: number;
+  preamble?: string;
 }> {
   const renderer = markdownRenderer;
-  const { items, prNumber, repo } = await acquirePrItems(prUrl, environment);
+  const prOptions = {
+    ...(options.full ? { full: true } : {}),
+    ...(options.includeComments ? { includeComments: true } : {}),
+  };
+  const { items, prNumber, repo, preamble } = await acquirePrItems(prUrl, environment, prOptions);
   const estimate = estimateBudget(items.map((i) => i.content ?? "").join("\n"));
   const bundle = createContextBundle({
     schemaVersion: 1,
@@ -855,6 +1061,7 @@ export async function executePrPack(
       languages: [], packages: [], frameworks: [], tests: [],
       entryPoints: [], dependencies: [], conflicts: [], partial: false,
     },
+    instruction: preamble,
   });
   const mdContent = renderer.render(bundle, items, renderer.options.parse({}));
   const handle = await open(outputPath, "w");
@@ -863,5 +1070,5 @@ export async function executePrPack(
   } finally {
     await handle.close();
   }
-  return { kind: "pr-pack", output: outputPath, prNumber, repo, files: items.length, tokens: bundle.budget.tokens };
+  return { kind: "pr-pack", output: outputPath, prNumber, repo, files: items.length, tokens: bundle.budget.tokens, preamble };
 }
